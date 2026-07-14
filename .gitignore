@@ -6,3 +6,5 @@ server/node_modules
 # environment / secrets
 .env
 server/.env
+
+.claude/settings.local.json
