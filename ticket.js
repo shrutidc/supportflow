@@ -1,6 +1,14 @@
 document.addEventListener("DOMContentLoaded", async () => {
     const contentArea = document.getElementById("ticketContent");
 
+    // Escape untrusted values before inserting into HTML (ticket content
+    // is user-supplied and must never be rendered raw).
+    function escapeHtml(value) {
+        return String(value ?? "").replace(/[&<>"']/g, ch => ({
+            "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+        }[ch]));
+    }
+
     // Extract ID from URL
     const urlParams = new URLSearchParams(window.location.search);
     const ticketId = urlParams.get("id");
@@ -83,8 +91,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     function renderTicket(t) {
-        const statusClass = `badge-status-${t.status.replace(/ /g, '-')}`;
-        const priorityClass = `badge-priority-${t.priority}`;
+        const statusClass = `badge-status-${escapeHtml(t.status.replace(/ /g, '-'))}`;
+        const priorityClass = `badge-priority-${escapeHtml(t.priority)}`;
 
         let messagesHtml = t.messages.map(msg => {
             const isCustomer = msg.sender === "customer";
@@ -92,8 +100,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             const senderName = isCustomer ? t.customer.name : t.assignedTo || "Agent";
             return `
                 <div class="message ${alignClass}">
-                    <div class="message-meta">${senderName} &bull; ${formatDate(msg.timestamp)}</div>
-                    <div class="message-bubble">${msg.body}</div>
+                    <div class="message-meta">${escapeHtml(senderName)} &bull; ${formatDate(msg.timestamp)}</div>
+                    <div class="message-bubble">${escapeHtml(msg.body)}</div>
                 </div>
             `;
         }).join("");
@@ -104,10 +112,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             <!-- Ticket Header -->
             <div class="ticket-header">
                 <div class="ticket-header-left">
-                    <h1 style="margin-bottom: 4px;">${t.subject}</h1>
+                    <h1 style="margin-bottom: 4px;">${escapeHtml(t.subject)}</h1>
                     <div class="ticket-meta-row">
-                        <span class="text-secondary font-medium">${t.ticketId}</span>
-                        <span class="badge ${priorityClass}">${t.priority}</span>
+                        <span class="text-secondary font-medium">${escapeHtml(t.ticketId)}</span>
+                        <span class="badge ${priorityClass}">${escapeHtml(t.priority)}</span>
                         ${canClaim ? `<button id="btnClaimTicket" class="btn btn-primary" style="padding: 4px 8px; font-size: 12px; margin-left: 8px;">Claim Ticket</button>` : ''}
                     </div>
                 </div>
@@ -133,7 +141,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                         
                         <!-- Reply Composer -->
                         <div class="composer">
-                            <textarea id="replyBody" placeholder="Type your reply to ${t.customer.name}..."></textarea>
+                            <textarea id="replyBody" placeholder="Type your reply to ${escapeHtml(t.customer.name)}..."></textarea>
                             <div class="composer-actions">
                                 <button id="btnSendReply" class="btn btn-primary">Send Reply</button>
                                 <button id="btnInternalNote" class="btn btn-secondary">Add Internal Note</button>
@@ -150,19 +158,19 @@ document.addEventListener("DOMContentLoaded", async () => {
                         <div class="info-list">
                             <div class="info-item">
                                 <span class="info-label">Name</span>
-                                <span class="info-value">${t.customer.name}</span>
+                                <span class="info-value">${escapeHtml(t.customer.name)}</span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label">Company</span>
-                                <span class="info-value">${t.customer.company}</span>
+                                <span class="info-value">${escapeHtml(t.customer.company)}</span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label">Email</span>
-                                <span class="info-value"><a href="mailto:${t.customer.email}" style="color: var(--accent-color); text-decoration: none;">${t.customer.email}</a></span>
+                                <span class="info-value"><a href="mailto:${escapeHtml(t.customer.email)}" style="color: var(--accent-color); text-decoration: none;">${escapeHtml(t.customer.email)}</a></span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label">Phone</span>
-                                <span class="info-value">${t.customer.phone}</span>
+                                <span class="info-value">${escapeHtml(t.customer.phone)}</span>
                             </div>
                         </div>
                     </div>
@@ -173,11 +181,11 @@ document.addEventListener("DOMContentLoaded", async () => {
                         <div class="info-list">
                             <div class="info-item">
                                 <span class="info-label">Category</span>
-                                <div style="margin-top: 4px;"><span class="chip">${t.category}</span></div>
+                                <div style="margin-top: 4px;"><span class="chip">${escapeHtml(t.category)}</span></div>
                             </div>
                             <div class="info-item">
                                 <span class="info-label">Assigned To</span>
-                                <span class="info-value">${t.assignedTo || "Unassigned"}</span>
+                                <span class="info-value">${escapeHtml(t.assignedTo || "Unassigned")}</span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label">Created</span>

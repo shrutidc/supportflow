@@ -1,6 +1,14 @@
 document.addEventListener("DOMContentLoaded", () => {
     window.tickets = [];
 
+    // Escape untrusted values before inserting into HTML (ticket content
+    // is user-supplied and must never be rendered raw).
+    function escapeHtml(value) {
+        return String(value ?? "").replace(/[&<>"']/g, ch => ({
+            "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+        }[ch]));
+    }
+
     const savedTheme = localStorage.getItem('themeMode') || 'light';
 
     // DOM Elements
@@ -189,28 +197,37 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         tbody.innerHTML = filtered.map(t => {
-            const statusClass = `badge-status-${t.status.replace(/ /g, '-')}`;
-            const priorityClass = `badge-priority-${t.priority}`;
+            const statusClass = `badge-status-${escapeHtml(t.status.replace(/ /g, '-'))}`;
+            const priorityClass = `badge-priority-${escapeHtml(t.priority)}`;
 
             // Style closed tickets as muted row entirely? The prompt says "visually styled as muted" for Closed state.
             const rowStyle = t.status === "Closed" ? 'style="opacity: 0.6;"' : '';
-            const fromParam = encodeURIComponent(window.location.search);
 
             return `
-                <tr onclick="window.location.href='ticket.html?id=${t.ticketId}&from=' + '${fromParam}'" ${rowStyle}>
-                    <td class="font-medium">${t.ticketId}</td>
+                <tr data-ticket-id="${escapeHtml(t.ticketId)}" ${rowStyle}>
+                    <td class="font-medium">${escapeHtml(t.ticketId)}</td>
                     <td>
-                        <div class="font-medium">${t.customer.name}</div>
-                        <div class="text-sm text-secondary">${t.customer.company || "—"}</div>
+                        <div class="font-medium">${escapeHtml(t.customer.name)}</div>
+                        <div class="text-sm text-secondary">${escapeHtml(t.customer.company || "—")}</div>
                     </td>
-                    <td>${t.subject}</td>
-                    <td><div class="text-sm">${t.assignedTo ? t.assignedTo : "Unassigned"}</div></td>
-                    <td><span class="badge ${priorityClass}">${t.priority}</span></td>
-                    <td><span class="badge ${statusClass}">${t.status}</span></td>
+                    <td>${escapeHtml(t.subject)}</td>
+                    <td><div class="text-sm">${escapeHtml(t.assignedTo ? t.assignedTo : "Unassigned")}</div></td>
+                    <td><span class="badge ${priorityClass}">${escapeHtml(t.priority)}</span></td>
+                    <td><span class="badge ${statusClass}">${escapeHtml(t.status)}</span></td>
                     <td style="text-align: right" class="text-secondary">${formatDate(t.lastUpdated)}</td>
                 </tr>
             `;
         }).join("");
+    }
+
+    // Delegated row navigation (replaces per-row inline onclick handlers).
+    if (tbody) {
+        tbody.addEventListener("click", (e) => {
+            const row = e.target.closest("tr[data-ticket-id]");
+            if (!row) return;
+            const fromParam = encodeURIComponent(window.location.search);
+            window.location.href = `ticket.html?id=${encodeURIComponent(row.dataset.ticketId)}&from=${fromParam}`;
+        });
     }
 
     function clearFilters() {

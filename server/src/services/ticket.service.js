@@ -9,6 +9,11 @@ const HttpError = require('../lib/http-error');
 
 const ESCALATION_SLA_HOURS = 4;
 
+/** Escape user input before embedding it in a regex (search injection / ReDoS). */
+function escapeRegex(input) {
+    return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function buildListQuery({ status, q, view }) {
     const query = {};
 
@@ -17,7 +22,7 @@ function buildListQuery({ status, q, view }) {
     }
 
     if (q) {
-        query.subject = { $regex: q, $options: 'i' };
+        query.subject = { $regex: escapeRegex(q), $options: 'i' };
     }
 
     if (view === 'assigned') {
