@@ -1,0 +1,30 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      MONGODB_URI: mongodb://mongo:27017/supportflow
+    depends_on:
+      mongo:
+        condition: service_started
+    # Seed demo data once the stack is up:
+    #   docker compose exec app node server/seed.js
+
+  mongo:
+    image: mongo:7
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "27017:27017"
+
+  # Not used by the app yet — reserved for BullMQ background jobs (Phase 7).
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+volumes:
+  mongo-data:

@@ -34,6 +34,8 @@ Built around a fictional mid-size B2B SaaS AI workflow-automation platform. **20
 
 ```txt
 SupportFlow/
+```txt
+SupportFlow/
 ├─ index.html          # entry point
 ├─ dashboard.html      # ticket queue + filters
 ├─ ticket.html         # ticket detail (conversation + metadata)
@@ -43,28 +45,61 @@ SupportFlow/
 ├─ data.js             # original static seed objects
 ├─ main.js             # dashboard rendering + filters
 ├─ ticket.js           # ticket detail behavior
+├─ Dockerfile / docker-compose.yml
+├─ docs/legacy/        # quarantined, never-wired AI scaffolding (reference only)
 └─ server/
-   ├─ models/Ticket.js # Mongoose schema
-   ├─ server.js        # Express API + static hosting
+   ├─ server.js        # thin bootstrap: validate env → connect DB → listen
    ├─ seed.js          # DB seeding entry point
-   └─ seedHandler.js   # maps data.js → MongoDB documents
+   ├─ models/Ticket.js # Mongoose schema
+   ├─ tests/           # supertest + node:test API suite
+   └─ src/
+      ├─ app.js           # Express app assembly (no port binding; test-friendly)
+      ├─ config/env.js    # validated environment config
+      ├─ db/              # connection (Atlas or in-memory fallback) + seeding
+      ├─ routes/          # HTTP routing
+      ├─ controllers/     # request/response translation
+      ├─ services/        # business rules (status side effects, atomic claim)
+      ├─ repositories/    # all Mongoose access
+      ├─ validators/      # Zod request schemas
+      ├─ middleware/      # validation, request IDs, central error handler
+      └─ lib/             # logger, async handler, HttpError
 ```
 
 ## Setup & running locally
 
-**Prerequisites:** Node.js 18+, and a MongoDB connection string (local `mongod` or a MongoDB Atlas cluster).
+**Prerequisites:** Node.js 18+. A MongoDB connection string is optional —
+without one the server boots a seeded in-memory database.
 
 ```bash
 cd server
 cp .env.example .env      # then edit .env with YOUR MongoDB URI — never commit it
 npm install
-npm run seed              # wipes + loads 20 sample tickets
+npm run seed              # wipes + loads 20 sample tickets (needs MONGODB_URI)
 npm start                 # or: npm run dev  (nodemon)
 ```
 
 Open <http://localhost:3000/index.html>.
 
+**With Docker:**
+
+```bash
+docker compose up --build
+docker compose exec app node server/seed.js   # seed demo data (first run)
+```
+
 > ⚠️ **Security:** never commit your real `.env`. It is gitignored here. If a connection string is ever exposed, **rotate the database password immediately** — a leaked URI must be treated as compromised.
+
+## Tests
+
+```bash
+cd server
+npm test
+```
+
+Characterization + security tests for the ticket API (list/filter/search,
+claim atomicity, escalation side effects, validation, mass-assignment
+protection). Runs against an in-memory MongoDB; CI runs the same suite on
+every push and pull request.
 
 ## Visualizations
 
@@ -85,4 +120,4 @@ Sole author. I built the vanilla-JS frontend (dashboard, ticket detail, filters,
 
 ## Tech stack
 
-`HTML5` · `CSS3 (Flexbox/Grid)` · `JavaScript` · `Node.js` · `Express` · `MongoDB / Mongoose`
+`HTML5` · `CSS3 (Flexbox/Grid)` · `JavaScript` · `Node.js` · `Express` · `MongoDB / Mongoose` · `Zod` · `Docker` · `GitHub Actions`
