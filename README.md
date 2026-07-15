@@ -105,14 +105,56 @@ every push and pull request.
 
 > _Add a dashboard screenshot to showcase the UI, e.g._ `![Dashboard](docs/dashboard.png)`.
 
+## Modern frontend (apps/web)
+
+The v2 Next.js frontend (Next 16 App Router, TypeScript, Tailwind, shadcn/ui,
+TanStack Query) now runs at parity with the legacy queue and ticket detail
+pages; the vanilla frontend stays available as a fallback until every page is
+migrated. See `docs/architecture/phase-2-frontend.md` for the parity map.
+
+```bash
+# Terminal 1 — API (also serves the legacy frontend at :3000)
+cd server && npm run dev
+
+# Terminal 2 — modern frontend at :3001 (proxies /api to :3000)
+cd apps/web && npm run dev
+```
+
+Web checks: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`.
+
+## Dataset
+
+`customer_support/` (gitignored, ~135k rows) is the Kaggle
+[multilingual-customer-support-tickets](https://www.kaggle.com/datasets/tobiasbueck/multilingual-customer-support-tickets)
+dataset by Tobias Bueck. It is reserved for seed enrichment and AI evaluation
+ground truth (triage labels, reference answers); raw CSVs are never committed.
+
+## Security notes
+
+- All mutation endpoints are validated with Zod; `PATCH` accepts only a
+  whitelist of fields (`status`, `priority`, `assignedTo`).
+- Ticket claiming is atomic (single conditional update — no double-claim race).
+- helmet security headers **including CSP** (`script-src 'self'` — no inline
+  scripts anywhere), closed-by-default CORS (`CORS_ORIGINS` allowlist), API
+  rate limiting, 100kb JSON body limit, regex-escaped search input.
+- All user-supplied content is HTML-escaped at render time.
+- The API only accepts `sender: "agent"` messages — customer messages will
+  enter via ingestion channels, so clients cannot fabricate them.
+- Optional `API_TOKEN` bearer gate for exposed deployments (stopgap until
+  Clerk authentication lands — until then the API has **no user-level auth**,
+  so do not expose it publicly without the token).
+- `npm audit`: 0 vulnerabilities in `server/` and `apps/web`.
+
 ## Potential next steps
 
-This repo is **v1**. The planned **v2** rebuilds it into an AI-native support platform:
+The v2 rebuild into an AI-native support platform is underway — the layered
+API, modern frontend, tests, and CI are in place. Still ahead:
 
+- Real **auth / multi-tenant workspaces** (Clerk + organization isolation)
 - AI ticket **summarization and triage**, and Claude-generated response suggestions
 - **Semantic search** across ticket history via vector embeddings
 - Auto-generated **knowledge base** from resolved tickets, plus SLA monitoring and analytics
-- Real **auth / multi-tenant workspaces** and async job processing
+- Background job processing, an AI evaluation dashboard, and production deployment
 
 ## Individual contributions
 
@@ -121,3 +163,4 @@ Sole author. I built the vanilla-JS frontend (dashboard, ticket detail, filters,
 ## Tech stack
 
 `HTML5` · `CSS3 (Flexbox/Grid)` · `JavaScript` · `Node.js` · `Express` · `MongoDB / Mongoose` · `Zod` · `Docker` · `GitHub Actions`
+`Next.js 16` · `TypeScript` · `Tailwind CSS` · `shadcn/ui` · `TanStack Query` · `Vitest`
