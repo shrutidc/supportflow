@@ -216,12 +216,12 @@ test('invalid enum values and empty patches are rejected with 400', async () => 
 test('appends a message and bumps lastUpdated', async () => {
     const res = await request(app)
         .post('/api/tickets/SF-1002/messages')
-        .send({ sender: 'customer', body: 'Any update on this?' });
+        .send({ sender: 'agent', body: 'Engineering has a fix rolling out.' });
 
     assert.equal(res.status, 200);
     const last = res.body.messages[res.body.messages.length - 1];
-    assert.equal(last.sender, 'customer');
-    assert.equal(last.body, 'Any update on this?');
+    assert.equal(last.sender, 'agent');
+    assert.equal(last.body, 'Engineering has a fix rolling out.');
 });
 
 test('first agent reply on a New ticket auto-claims it', async () => {
@@ -234,14 +234,12 @@ test('first agent reply on a New ticket auto-claims it', async () => {
     assert.equal(res.body.assignedTo, 'You');
 });
 
-test('customer message on a New ticket does not claim it', async () => {
+test('client-supplied customer sender is rejected (fabrication guard)', async () => {
     const res = await request(app)
         .post('/api/tickets/SF-1001/messages')
-        .send({ sender: 'customer', body: 'Please help.' });
+        .send({ sender: 'customer', body: 'I demand a refund.' });
 
-    assert.equal(res.status, 200);
-    assert.equal(res.body.status, 'New');
-    assert.equal(res.body.assignedTo, null);
+    assert.equal(res.status, 400);
 });
 
 test('rejects invalid sender, blank body, and missing fields with 400', async () => {
@@ -278,4 +276,5 @@ test('responses carry security and tracing headers', async () => {
     const res = await request(app).get('/api/tickets');
     assert.equal(res.headers['x-content-type-options'], 'nosniff');
     assert.ok(res.headers['x-request-id']);
+    assert.match(res.headers['content-security-policy'], /script-src 'self'/);
 });

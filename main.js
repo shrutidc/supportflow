@@ -23,6 +23,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const urlParams = new URLSearchParams(window.location.search);
     const viewParam = urlParams.get("view");
 
+    // Set initial active nav (index.html only — extracted from an inline
+    // script block for CSP compliance).
+    const navAssigned = document.getElementById("nav-assigned");
+    const navTickets = document.getElementById("nav-tickets");
+    if (navAssigned && navTickets) {
+        if (viewParam === "assigned") navAssigned.classList.add("active");
+        else navTickets.classList.add("active");
+    }
+
     let currentSearch = urlParams.get("q") || "";
     let currentStatus = urlParams.get("status") || "All";
     let currentQueue = viewParam || "all";

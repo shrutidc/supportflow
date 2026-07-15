@@ -6,10 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ticket Detail | SupportFlow</title>
     <link rel="stylesheet" href="styles.css">
-    <script>
-        if (localStorage.getItem('themeMode') === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
-        if (localStorage.getItem('sidebarCollapsed') === 'true') document.documentElement.classList.add('sidebar-collapsed');
-    </script>
+    <script src="legacy-boot.js"></script>
 </head>
 
 <body>
@@ -62,7 +59,7 @@
                     <h1>Ticket Viewer</h1>
                 </div>
                 <div class="topbar-right">
-                    <div class="avatar dropdown-trigger" onclick="window.location.href='settings.html'"
+                    <div class="avatar dropdown-trigger" data-href="settings.html"
                         style="cursor: pointer;">AG
                     </div>
                 </div>

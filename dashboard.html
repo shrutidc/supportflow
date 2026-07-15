@@ -75,10 +75,7 @@
             flex-shrink: 0;
         }
     </style>
-    <script>
-        if (localStorage.getItem('themeMode') === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
-        if (localStorage.getItem('sidebarCollapsed') === 'true') document.documentElement.classList.add('sidebar-collapsed');
-    </script>
+    <script src="legacy-boot.js"></script>
 </head>
 
 <body>
@@ -123,7 +120,7 @@
                     <h1 id="pageTitle">Dashboard</h1>
                 </div>
                 <div class="topbar-right">
-                    <div class="avatar dropdown-trigger" onclick="window.location.href='settings.html'"
+                    <div class="avatar dropdown-trigger" data-href="settings.html"
                         style="cursor: pointer;">AG
                     </div>
                 </div>
@@ -168,19 +165,19 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr onclick="window.location.href='ticket.html?id=SF-1002'">
+                                        <tr data-href="ticket.html?id=SF-1002">
                                             <td class="font-medium">SF-1002</td>
                                             <td>API returning 500 errors</td>
                                             <td style="color: var(--status-escalated);" class="font-semibold">Feb 20,
                                                 10:15 AM</td>
                                         </tr>
-                                        <tr onclick="window.location.href='ticket.html?id=SF-1006'">
+                                        <tr data-href="ticket.html?id=SF-1006">
                                             <td class="font-medium">SF-1006</td>
                                             <td>Integration with Salesforce failing</td>
                                             <td style="color: var(--status-escalated);" class="font-semibold">Feb 20,
                                                 09:30 AM</td>
                                         </tr>
-                                        <tr onclick="window.location.href='ticket.html?id=SF-1005'">
+                                        <tr data-href="ticket.html?id=SF-1005">
                                             <td class="font-medium">SF-1005</td>
                                             <td>How do I add a new team member?</td>
                                             <td style="color: var(--priority-medium);" class="font-semibold">Feb 20,

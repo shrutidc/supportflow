@@ -6,10 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tickets | SupportFlow</title>
     <link rel="stylesheet" href="styles.css">
-    <script>
-        if (localStorage.getItem('themeMode') === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
-        if (localStorage.getItem('sidebarCollapsed') === 'true') document.documentElement.classList.add('sidebar-collapsed');
-    </script>
+    <script src="legacy-boot.js"></script>
 </head>
 
 <body>
@@ -68,7 +65,7 @@
                         <button class="filter-btn" data-status="Escalated">Escalated</button>
                         <button class="filter-btn" data-status="Closed">Closed</button>
                     </div>
-                    <div class="avatar dropdown-trigger" onclick="window.location.href='settings.html'"
+                    <div class="avatar dropdown-trigger" data-href="settings.html"
                         style="cursor: pointer;">AG
                     </div>
                 </div>
@@ -118,17 +115,6 @@
             </div>
         </main>
     </div>
-
-    <script>
-        // Set active nav visually
-        const searchParams = new URLSearchParams(window.location.search);
-        const view = searchParams.get('view');
-        if (view === 'assigned') {
-            document.getElementById('nav-assigned').classList.add('active');
-        } else {
-            document.getElementById('nav-tickets').classList.add('active');
-        }
-    </script>
     <script src="main.js"></script>
 </body>
 

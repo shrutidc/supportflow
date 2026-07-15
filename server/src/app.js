@@ -7,6 +7,7 @@ const path = require('path');
 const env = require('./config/env');
 const requestId = require('./middleware/request-id');
 const errorHandler = require('./middleware/error-handler');
+const apiToken = require('./middleware/api-token');
 const ticketsRouter = require('./routes/tickets.routes');
 
 /**
@@ -16,9 +17,16 @@ const ticketsRouter = require('./routes/tickets.routes');
 function createApp() {
     const app = express();
 
-    // Security headers. CSP stays off until the legacy frontend's inline
-    // event handlers are removed in the Next.js migration (Phase 2).
-    app.use(helmet({ contentSecurityPolicy: false }));
+    // Behind a reverse proxy (Railway, etc.) trust X-Forwarded-For so rate
+    // limiting sees real client IPs.
+    if (env.trustProxy) {
+        app.set('trust proxy', 1);
+    }
+
+    // Security headers, including CSP. Helmet's default policy applies:
+    // script-src 'self' (the legacy frontend's inline scripts/handlers were
+    // extracted to external files), inline style attributes remain allowed.
+    app.use(helmet());
 
     // CORS: the frontend is served same-origin by this server, so no
     // cross-origin access is allowed unless CORS_ORIGINS is configured.
@@ -44,6 +52,9 @@ function createApp() {
             })
         );
     }
+
+    // Optional bearer-token gate (API_TOKEN env) — see middleware/api-token.js.
+    app.use('/api', apiToken);
 
     app.use('/api/tickets', ticketsRouter);
 

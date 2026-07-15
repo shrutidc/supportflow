@@ -69,9 +69,11 @@ export async function patchTicket(ticketId: string, patch: TicketPatch): Promise
   return ticketSchema.parse(data);
 }
 
+// The API only accepts agent messages; customer messages arrive through
+// ingestion channels (later phases), never from this client.
 export async function postMessage(
   ticketId: string,
-  message: { sender: "customer" | "agent"; body: string },
+  message: { sender: "agent"; body: string },
 ): Promise<Ticket> {
   const data = await request<unknown>(`/api/tickets/${encodeURIComponent(ticketId)}/messages`, {
     method: "POST",

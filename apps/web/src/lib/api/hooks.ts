@@ -68,7 +68,7 @@ export function useClaimTicket(ticketId: string) {
 export function useSendMessage(ticketId: string) {
   const applyUpdate = useApplyTicketUpdate();
   return useMutation({
-    mutationFn: (message: { sender: "customer" | "agent"; body: string }) =>
+    mutationFn: (message: { sender: "agent"; body: string }) =>
       postMessage(ticketId, message),
     onSuccess: applyUpdate,
   });

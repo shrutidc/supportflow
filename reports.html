@@ -22,10 +22,7 @@
             color: var(--text-primary);
         }
     </style>
-    <script>
-        if (localStorage.getItem('themeMode') === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
-        if (localStorage.getItem('sidebarCollapsed') === 'true') document.documentElement.classList.add('sidebar-collapsed');
-    </script>
+    <script src="legacy-boot.js"></script>
 </head>
 
 <body>
@@ -75,7 +72,7 @@
                     <h1 id="pageTitle">Reports</h1>
                 </div>
                 <div class="topbar-right">
-                    <div class="avatar dropdown-trigger" onclick="window.location.href='settings.html'"
+                    <div class="avatar dropdown-trigger" data-href="settings.html"
                         style="cursor: pointer;">AG
                     </div>
                 </div>

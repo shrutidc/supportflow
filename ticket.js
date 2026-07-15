@@ -85,7 +85,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             <div style="text-align: center; padding: 64px 20px;">
                 <h2 style="color: var(--text-primary); margin-bottom: 8px;">Ticket not found</h2>
                 <p style="color: var(--text-secondary); margin-bottom: 16px;">The ticket ID you requested does not exist or has been removed.</p>
-                <button class="btn btn-primary" onclick="window.location.href='index.html'">Return to Dashboard</button>
+                <button class="btn btn-primary" data-href="index.html">Return to Dashboard</button>
             </div>
         `;
     }

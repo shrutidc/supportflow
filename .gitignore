@@ -8,3 +8,4 @@ server/node_modules
 server/.env
 
 .claude/settings.local.json
+customer_support/

@@ -21,8 +21,12 @@ const patchTicketSchema = z
         message: 'No updatable fields provided (allowed: status, priority, assignedTo)'
     });
 
+// The public API only accepts agent messages. Customer messages enter the
+// system through ingestion channels (email/portal — later phases), never as
+// client-supplied "customer" senders that would let anyone fabricate a
+// customer's words.
 const addMessageSchema = z.object({
-    sender: z.enum(['customer', 'agent']),
+    sender: z.literal('agent'),
     body: z.string().trim().min(1, 'Message body must not be empty').max(10000)
 });
 

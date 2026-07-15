@@ -27,13 +27,23 @@ function loadEnv() {
         .map(s => s.trim())
         .filter(Boolean);
 
+    // Optional bearer token protecting /api until real authentication
+    // (Clerk, Phase 3) lands. Empty = open (local development).
+    const apiToken = process.env.API_TOKEN || '';
+
+    // Set to true when running behind a reverse proxy (Railway, etc.) so
+    // rate limiting sees real client IPs from X-Forwarded-For.
+    const trustProxy = process.env.TRUST_PROXY === 'true';
+
     return {
         nodeEnv,
         isProduction: nodeEnv === 'production',
         isTest: nodeEnv === 'test',
         port,
         mongoUri,
-        corsOrigins
+        corsOrigins,
+        apiToken,
+        trustProxy
     };
 }
 
