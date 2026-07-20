@@ -1,108 +1,88 @@
-## SupportFlow
+# SupportFlow
 
-SupportFlow is a lightweight, enterprise-style **customer support ticket console** built with **vanilla HTML, CSS, and JavaScript**. It models how a mid-size B2B SaaS support team triages, assigns, escalates, and resolves customer issues through a clean **Ticket Queue (Dashboard)** and **Ticket Detail** workflow.
+SupportFlow is an enterprise-style **customer support ticket console** that models how a mid-size B2B SaaS team triages, assigns, escalates, and resolves customer issues. The frontend is built with vanilla **HTML, CSS, and JavaScript**; a **Node.js + Express + MongoDB** backend persists and serves the tickets.
 
----
+## Objectives & goals
 
-### Features
+- Model a realistic **support ticket lifecycle** (not just a to-do list) — ownership, escalation, priority, and SLA behavior.
+- Practice a **full-stack CRUD application** end to end: static UI → REST API → database, with seed data for a believable demo.
+- Keep the frontend dependency-free (vanilla JS) to demonstrate core DOM/state work without a framework.
 
-- **Ticket Queue Dashboard** with realistic SaaS support issues
+## Overview
+
+Support agents work two views: a **Ticket Queue (Dashboard)** for triage and a **Ticket Detail** page for the conversation and metadata. Tickets move through a defined status lifecycle, can be claimed by a single agent, and escalate into an engineering queue with a tighter SLA.
+
+## Features
+
+- **Ticket queue dashboard** seeded with realistic B2B SaaS issues
 - **Status lifecycle:** `New → In Progress → Escalated → Closed`
-- **Ownership model:** tickets may start unassigned; once claimed they have **single-agent ownership**
-- **Escalation meaning (modeled in UI):**
-  - reassigned to **Engineering Queue**
-  - **Priority becomes High**
-  - **tighter SLA** indicator
-- **Status filter buttons** (New / In Progress / Escalated / Closed)
-- **Clickable ticket rows** → navigate to `ticket.html`
-- **Collapsible sidebar** (hamburger on smaller screens)
-- **Light/Dark mode** (Appearance)
+- **Ownership model:** tickets may start unassigned; once claimed they have single-agent ownership
+- **Escalation logic:** reassign to the **Engineering Queue**, bump **priority to High**, apply a **tighter SLA** indicator
+- **Status filter buttons**, **clickable ticket rows**, a **collapsible sidebar**, and **Light/Dark mode**
 
----
+## Methodology / how it's built
 
-### Sample Data
+- **Frontend** renders ticket rows and detail views from data returned by the API (`main.js`, `ticket.js`), with all styling in `styles.css`.
+- **Backend** (`server/`) is an Express app exposing REST endpoints backed by a Mongoose `Ticket` model (`server/models/Ticket.js`); `seed.js` wipes and repopulates the collection with 20 demo tickets across Billing, Integration, Bug, and Account Access.
+- The Express server also serves the static frontend, so the whole app runs from one origin.
 
-Designed around a fictional **mid-size B2B SaaS AI workflow automation platform**.
+## Sample data
 
-**Ticket categories/tags:**
-- Billing
-- Integration
-- Bug
-- Account Access
+Built around a fictional mid-size B2B SaaS AI workflow-automation platform. **20 tickets** across four categories — **Billing, Integration, Bug, Account Access** — loaded via `npm run seed`.
 
-**Ticket count:**
-- 20 tickets (tight + realistic demo)
-
----
-
-### Pages
-
-- `index.html` — entry point
-- `dashboard.html` — ticket queue + filters
-- `ticket.html` — ticket detail (conversation + metadata panel)
-- `reports.html` — placeholder page (enterprise nav realism)
-- `settings.html` — placeholder page (enterprise nav realism)
-
----
-
-### Tech Stack
-
-- HTML5
-- CSS3 (Flexbox/Grid, responsive breakpoints)
-- JavaScript (UI behavior + rendering from static data)
-
----
-
-### Project Structure
+## Project structure
 
 ```txt
 SupportFlow/
-├─ index.html
-├─ dashboard.html
-├─ ticket.html
-├─ reports.html
-├─ settings.html
+├─ index.html          # entry point
+├─ dashboard.html      # ticket queue + filters
+├─ ticket.html         # ticket detail (conversation + metadata)
+├─ reports.html        # placeholder (enterprise nav realism)
+├─ settings.html       # placeholder (enterprise nav realism)
 ├─ styles.css
-├─ data.js
-├─ main.js
-├─ ticket.js
-└─ /server/
-   ├─ models/Ticket.js
-   ├─ server.js
-   └─ seed.js
+├─ data.js             # original static seed objects
+├─ main.js             # dashboard rendering + filters
+├─ ticket.js           # ticket detail behavior
+└─ server/
+   ├─ models/Ticket.js # Mongoose schema
+   ├─ server.js        # Express API + static hosting
+   ├─ seed.js          # DB seeding entry point
+   └─ seedHandler.js   # maps data.js → MongoDB documents
+```
 
----
+## Setup & running locally
 
-### Backend Setup and Running Locally
+**Prerequisites:** Node.js 18+, and a MongoDB connection string (local `mongod` or a MongoDB Atlas cluster).
 
-To run the application with the new Node.js + Express backend and MongoDB database:
+```bash
+cd server
+cp .env.example .env      # then edit .env with YOUR MongoDB URI — never commit it
+npm install
+npm run seed              # wipes + loads 20 sample tickets
+npm start                 # or: npm run dev  (nodemon)
+```
 
-1. **Set your MongoDB URI**
-   Create a `.env` file in the `/server` directory and export the connection string to your MongoDB Atlas cluster (or local instance).
-   ```bash
-   cd server
-   echo "MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/supportflow?retryWrites=true&w=majority" > .env
-   ```
+Open <http://localhost:3000/index.html>.
 
-2. **Install Dependencies**
-   ```bash
-   cd server
-   npm install
-   ```
+> ⚠️ **Security:** never commit your real `.env`. It is gitignored here. If a connection string is ever exposed, **rotate the database password immediately** — a leaked URI must be treated as compromised.
 
-3. **Seed Initial Data**
-   The application requires initial data mapping the old `data.js` objects into MongoDB.
-   ```bash
-   npm run seed
-   ```
-   *(This script will connect to your database, wipe existing tickets, and populate it with 20 sample tickets.)*
+## Visualizations
 
-4. **Run the Server**
-   ```bash
-   # Production
-   npm start
-   
-   # Development (with nodemon)
-   npm run dev
-   ```
-   Once the server is running, the Node.js application will serve the frontend static files. Open your browser and navigate to `http://localhost:3000/index.html`.
+> _Add a dashboard screenshot to showcase the UI, e.g._ `![Dashboard](docs/dashboard.png)`.
+
+## Potential next steps
+
+This repo is **v1**. The planned **v2** rebuilds it into an AI-native support platform:
+
+- AI ticket **summarization and triage**, and Claude-generated response suggestions
+- **Semantic search** across ticket history via vector embeddings
+- Auto-generated **knowledge base** from resolved tickets, plus SLA monitoring and analytics
+- Real **auth / multi-tenant workspaces** and async job processing
+
+## Individual contributions
+
+Sole author. I built the vanilla-JS frontend (dashboard, ticket detail, filters, theming), the Express + MongoDB backend and `Ticket` schema, and the seed pipeline that maps the original static data into the database.
+
+## Tech stack
+
+`HTML5` · `CSS3 (Flexbox/Grid)` · `JavaScript` · `Node.js` · `Express` · `MongoDB / Mongoose`

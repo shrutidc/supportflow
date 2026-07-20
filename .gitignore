@@ -2,3 +2,7 @@ node_modules
 server/node_modules
 .DS_Store
 .env
+
+# environment / secrets
+.env
+server/.env
