@@ -11,6 +11,7 @@ import {
   Settings,
   UserCheck,
 } from "lucide-react";
+import { OrganizationSwitcher, UserButton } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -63,6 +64,13 @@ function SidebarNav() {
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+
+  // The auth screens render standalone — no sidebar, no workspace chrome.
+  if (pathname.startsWith("/sign-in") || pathname.startsWith("/sign-up")) {
+    return <>{children}</>;
+  }
+
   return (
     <div className="flex min-h-dvh">
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-56 flex-col border-r bg-sidebar md:flex">
@@ -70,13 +78,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Layers className="size-5 text-primary" />
           <span className="text-sm font-semibold tracking-tight">SupportFlow</span>
         </div>
+
+        {/* Workspace switcher: the visible expression of multi-tenancy. */}
+        <div className="border-b px-3 py-3">
+          <OrganizationSwitcher
+            hidePersonal
+            appearance={{
+              elements: {
+                rootBox: "w-full",
+                organizationSwitcherTrigger: "w-full justify-between px-2 py-1.5 text-sm",
+              },
+            }}
+          />
+        </div>
+
         <div className="flex-1 overflow-y-auto py-3">
           <Suspense>
             <SidebarNav />
           </Suspense>
         </div>
+
         <div className="flex items-center justify-between border-t px-4 py-3">
-          <span className="text-xs text-muted-foreground">Agent workspace</span>
+          {/* Routes below the auth boundary always have a signed-in user. */}
+          <UserButton appearance={{ elements: { avatarBox: "size-7" } }} />
+          <span className="sr-only">Account menu</span>
           <ThemeToggle />
         </div>
       </aside>

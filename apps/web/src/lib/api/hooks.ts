@@ -6,6 +6,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import {
+  claimTicket,
   fetchTicket,
   fetchTickets,
   patchTicket,
@@ -56,7 +57,7 @@ export function useClaimTicket(ticketId: string) {
   const queryClient = useQueryClient();
   const applyUpdate = useApplyTicketUpdate();
   return useMutation({
-    mutationFn: () => patchTicket(ticketId, { assignedTo: "You", status: "In Progress" }),
+    mutationFn: () => claimTicket(ticketId),
     onSuccess: applyUpdate,
     // A 409 means someone else claimed it — refetch to show current owner.
     onError: () => {

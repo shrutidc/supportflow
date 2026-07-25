@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ApiError, fetchTicket, fetchTickets, patchTicket } from "./client";
+import { ApiError, claimTicket, fetchTicket, fetchTickets, patchTicket } from "./client";
 
 const listItem = {
   _id: "a1",
@@ -14,6 +14,7 @@ const listItem = {
 
 const fullTicket = {
   ...listItem,
+  organizationId: "org_test",
   category: "Account Access",
   createdAt: "2026-02-18T09:00:00.000Z",
   slaDeadline: "2026-02-21T09:00:00.000Z",
@@ -75,11 +76,17 @@ describe("error handling", () => {
 
   it("surfaces 409 conflicts from claim attempts", async () => {
     mockFetch(409, { error: "Ticket is already assigned" });
-    const err = await patchTicket("SF-1001", { assignedTo: "You", status: "In Progress" }).catch(
-      (e) => e,
-    );
+    const err = await claimTicket("SF-1001").catch((e) => e);
     expect(err).toBeInstanceOf(ApiError);
     expect(err.status).toBe(409);
+    expect(err.message).toBe("Ticket is already assigned");
+  });
+
+  it("surfaces 403 when an agent attempts a reassignment", async () => {
+    mockFetch(403, { error: "Only managers and administrators can reassign tickets" });
+    const err = await patchTicket("SF-1001", { assignedTo: "Someone Else" }).catch((e) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err.status).toBe(403);
   });
 
   it("falls back to a generic message when the body is not JSON", async () => {

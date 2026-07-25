@@ -23,7 +23,10 @@ export const ticketListItemSchema = z.object({
   subject: z.string(),
   priority: ticketPrioritySchema,
   status: ticketStatusSchema,
+  /** Display label: a member's name, or a queue such as "Engineering Queue". */
   assignedTo: z.string().nullish(),
+  /** Set only when a real person owns the ticket (null for queues). */
+  assignedToUserId: z.string().nullish(),
   lastUpdated: z.string(),
   customer: z.object({
     name: z.string(),
@@ -43,6 +46,7 @@ export const messageSchema = z.object({
 });
 
 export const ticketSchema = ticketListItemSchema.extend({
+  organizationId: z.string(),
   category: z.string(),
   createdAt: z.string(),
   slaDeadline: z.string(),

@@ -58,8 +58,21 @@ export async function fetchTicket(ticketId: string): Promise<Ticket> {
 export type TicketPatch = {
   status?: TicketStatus;
   priority?: TicketPriority;
+  /** Reassignment — the API requires a manager role for this field. */
   assignedTo?: string | null;
 };
+
+/**
+ * Take ownership of an unassigned ticket. The owner is the authenticated
+ * caller, so this carries no body. Throws ApiError(409) if someone else
+ * claimed it first.
+ */
+export async function claimTicket(ticketId: string): Promise<Ticket> {
+  const data = await request<unknown>(`/api/tickets/${encodeURIComponent(ticketId)}/claim`, {
+    method: "POST",
+  });
+  return ticketSchema.parse(data);
+}
 
 export async function patchTicket(ticketId: string, patch: TicketPatch): Promise<Ticket> {
   const data = await request<unknown>(`/api/tickets/${encodeURIComponent(ticketId)}`, {
