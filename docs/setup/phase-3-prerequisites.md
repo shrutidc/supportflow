@@ -99,6 +99,31 @@ env files ✅, and which roles your plan allows.
 
 ---
 
+## Confirmed configuration (2026-07-25)
+
+Atlas and Clerk are both live and verified.
+
+- **Atlas**: cluster `cluster0.fy9dcdu`, database `supportflow`, user
+  `supportflowUser`. Verified end to end: seeded 20 tickets, mutated one via
+  the API, restarted the server, and read the change back from Atlas.
+  - *Follow-up for Phase 10*: `supportflowUser` currently holds
+    `atlasAdmin@admin`. Production should use a separate user scoped to
+    `readWrite` on the `supportflow` database only.
+- **Clerk**: application `SupportFlow`, development instance, Hobby plan.
+  Organizations (Multi-tenancy B2B) enabled; custom roles available (10 max).
+
+### Role mapping
+
+Clerk ships two roles; we add one. SupportFlow's three domain roles map to
+Clerk org roles directly, so Clerk stays the single source of truth for
+permissions — we do not duplicate a role field in our own records.
+
+| SupportFlow role | Clerk role key | Notes |
+| --- | --- | --- |
+| Administrator | `org:admin` | Built in. Workspace settings, billing, member management. |
+| Manager | `org:manager` | **Custom — must be added in the dashboard.** Reporting, reassignment, workflow approval. |
+| Agent | `org:member` | Built in. Default for new members: work tickets, reply, claim. |
+
 ## Where each value goes (quick map)
 
 Both files are gitignored. Create them from the matching `.example` file if
