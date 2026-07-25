@@ -2,19 +2,25 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const path = require('path');
+const { clerkMiddleware } = require('@clerk/express');
 
 const env = require('./config/env');
 const requestId = require('./middleware/request-id');
 const errorHandler = require('./middleware/error-handler');
 const apiToken = require('./middleware/api-token');
+const { requireAuth } = require('./middleware/auth');
 const ticketsRouter = require('./routes/tickets.routes');
 
 /**
- * Builds the Express app without binding a port or touching the
- * database, so tests can exercise it with supertest.
+ * Builds the Express app without binding a port or touching the database,
+ * so tests can exercise it with supertest.
+ *
+ * `authMiddleware` is an injection point for tests, which supply a stub
+ * session instead of standing up real Clerk infrastructure. It is not a
+ * production bypass: callers that pass nothing get real Clerk verification,
+ * and nothing reads an environment variable to disable authentication.
  */
-function createApp() {
+function createApp({ authMiddleware } = {}) {
     const app = express();
 
     // Behind a reverse proxy (Railway, etc.) trust X-Forwarded-For so rate
@@ -23,23 +29,19 @@ function createApp() {
         app.set('trust proxy', 1);
     }
 
-    // Security headers, including CSP. Helmet's default policy applies:
-    // script-src 'self' (the legacy frontend's inline scripts/handlers were
-    // extracted to external files), inline style attributes remain allowed.
+    // Security headers, including CSP.
     app.use(helmet());
 
-    // CORS: the frontend is served same-origin by this server, so no
-    // cross-origin access is allowed unless CORS_ORIGINS is configured.
+    // CORS: closed by default. The Next.js frontend calls this API through
+    // its own server-side proxy, so it is same-origin from the browser's
+    // point of view and needs no entry here.
     app.use(cors({ origin: env.corsOrigins.length > 0 ? env.corsOrigins : false }));
 
     app.use(express.json({ limit: '100kb' }));
     app.use(requestId);
 
-    // Serve the static frontend from the repository root.
-    app.use(express.static(path.join(__dirname, '..', '..')));
-
-    // Rate limit the API (not static assets). Generous ceiling: this
-    // protects against abuse, not normal agent usage.
+    // Rate limit the API. Generous ceiling: this protects against abuse,
+    // not normal agent usage.
     if (!env.isTest) {
         app.use(
             '/api',
@@ -56,12 +58,24 @@ function createApp() {
     // Optional bearer-token gate (API_TOKEN env) — see middleware/api-token.js.
     app.use('/api', apiToken);
 
+    // Authentication. Clerk parses and verifies the session token; requireAuth
+    // then insists on a signed-in user with an active organization and builds
+    // req.auth. Everything below this line is tenant-scoped.
+    if (authMiddleware) {
+        app.use('/api', authMiddleware);
+    } else {
+        app.use('/api', clerkMiddleware(), requireAuth);
+    }
+
     app.use('/api/tickets', ticketsRouter);
 
-    // JSON 404 for unknown API routes (static handler covers the rest).
+    // JSON 404 for unknown API routes.
     app.use('/api', (req, res) => {
         res.status(404).json({ error: 'Not found' });
     });
+
+    // Health check, deliberately outside /api so it needs no credentials.
+    app.get('/healthz', (req, res) => res.json({ status: 'ok' }));
 
     app.use(errorHandler);
 

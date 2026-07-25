@@ -12,7 +12,16 @@ const router = express.Router();
 
 router.get('/', validate(listQuerySchema, 'query'), asyncHandler(controller.list));
 router.get('/:ticketId', asyncHandler(controller.get));
+
+// Claiming is taking ownership of an unassigned ticket for yourself, so it
+// carries no body — the owner is the authenticated caller.
+router.post('/:ticketId/claim', asyncHandler(controller.claim));
+
 router.patch('/:ticketId', validate(patchTicketSchema, 'body'), asyncHandler(controller.update));
-router.post('/:ticketId/messages', validate(addMessageSchema, 'body'), asyncHandler(controller.addMessage));
+router.post(
+    '/:ticketId/messages',
+    validate(addMessageSchema, 'body'),
+    asyncHandler(controller.addMessage)
+);
 
 module.exports = router;

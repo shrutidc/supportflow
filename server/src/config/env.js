@@ -27,9 +27,20 @@ function loadEnv() {
         .map(s => s.trim())
         .filter(Boolean);
 
-    // Optional bearer token protecting /api until real authentication
-    // (Clerk, Phase 3) lands. Empty = open (local development).
+    // Optional bearer token in front of /api, layered on top of Clerk auth.
+    // Empty = not required (local development).
     const apiToken = process.env.API_TOKEN || '';
+
+    // Clerk. The SDK reads CLERK_SECRET_KEY from the environment itself;
+    // validating here means a misconfigured deployment fails at boot with a
+    // clear message instead of 500ing on the first authenticated request.
+    const clerkSecretKey = process.env.CLERK_SECRET_KEY || '';
+    if (nodeEnv !== 'test' && !clerkSecretKey) {
+        throw new Error(
+            'CLERK_SECRET_KEY is required — the API cannot verify sessions without it. ' +
+                'Copy it from the Clerk dashboard into server/.env'
+        );
+    }
 
     // Set to true when running behind a reverse proxy (Railway, etc.) so
     // rate limiting sees real client IPs from X-Forwarded-For.
@@ -43,6 +54,7 @@ function loadEnv() {
         mongoUri,
         corsOrigins,
         apiToken,
+        clerkSecretKey,
         trustProxy
     };
 }
