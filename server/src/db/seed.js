@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const Ticket = require('../../models/Ticket');
+const Organization = require('../../models/Organization');
 const logger = require('../lib/logger');
 
 /**
@@ -24,8 +25,9 @@ function loadSupportData() {
     return data;
 }
 
-function toTicketDocument(t) {
+function toTicketDocument(t, organizationId) {
     return {
+        organizationId,
         ticketId: t.id,
         subject: t.subject,
         category: t.category,
@@ -54,15 +56,32 @@ function toTicketDocument(t) {
     };
 }
 
-async function seedDB() {
-    logger.info('Seeding started');
+/**
+ * Organization that owns demo data when no real Clerk org is supplied.
+ * Used by local development, the in-memory fallback, and tests.
+ */
+const DEMO_ORG_ID = process.env.DEMO_ORG_ID || 'org_demo_supportflow';
 
-    const seedTickets = loadSupportData().map(toTicketDocument);
+/**
+ * Seeds the demo dataset into one organization, replacing only that
+ * organization's tickets — other tenants' data is never touched.
+ */
+async function seedDB(organizationId = DEMO_ORG_ID) {
+    logger.info('Seeding started', { organizationId });
 
-    await Ticket.deleteMany({});
+    const seedTickets = loadSupportData().map(t => toTicketDocument(t, organizationId));
+
+    await Organization.updateOne(
+        { clerkOrgId: organizationId },
+        { $setOnInsert: { clerkOrgId: organizationId, name: 'Demo Workspace' } },
+        { upsert: true }
+    );
+
+    await Ticket.deleteMany({ organizationId });
     await Ticket.insertMany(seedTickets);
 
-    logger.info('Seeding complete', { tickets: seedTickets.length });
+    logger.info('Seeding complete', { tickets: seedTickets.length, organizationId });
 }
 
 module.exports = seedDB;
+module.exports.DEMO_ORG_ID = DEMO_ORG_ID;
