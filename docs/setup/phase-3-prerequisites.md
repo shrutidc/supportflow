@@ -110,19 +110,28 @@ Atlas and Clerk are both live and verified.
     `atlasAdmin@admin`. Production should use a separate user scoped to
     `readWrite` on the `supportflow` database only.
 - **Clerk**: application `SupportFlow`, development instance, Hobby plan.
-  Organizations (Multi-tenancy B2B) enabled; custom roles available (10 max).
+  Organizations (Multi-tenancy B2B) enabled, **membership required** (every
+  user must belong to an organization — this is what makes isolation
+  enforceable). All three roles created.
 
 ### Role mapping
 
-Clerk ships two roles; we add one. SupportFlow's three domain roles map to
-Clerk org roles directly, so Clerk stays the single source of truth for
-permissions — we do not duplicate a role field in our own records.
+SupportFlow's three domain roles map onto Clerk org roles directly, so Clerk
+stays the single source of truth for role assignment — we do not duplicate a
+role field in our own records.
 
-| SupportFlow role | Clerk role key | Notes |
+| SupportFlow role | Clerk role key | Responsibilities |
 | --- | --- | --- |
-| Administrator | `org:admin` | Built in. Workspace settings, billing, member management. |
-| Manager | `org:manager` | **Custom — must be added in the dashboard.** Reporting, reassignment, workflow approval. |
-| Agent | `org:member` | Built in. Default for new members: work tickets, reply, claim. |
+| Administrator | `org:admin` | Workspace settings, billing, member management. |
+| Manager | `org:manager` | Reporting, reassignment, workflow approval. |
+| Agent | `org:member` | Default for new members: work tickets, reply, claim. |
+
+Authorization is enforced in our API against the **role key** from the
+verified session, not against Clerk's own permission entries. `org:manager`
+therefore needs no Clerk permissions attached for our checks to work. (If we
+later use Clerk's `has({ permission })` helpers, Manager must first be given
+at least the permissions `org:member` has, or it would be *less* privileged
+than an Agent.)
 
 ## Where each value goes (quick map)
 
