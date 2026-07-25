@@ -99,6 +99,25 @@ env files ✅, and which roles your plan allows.
 
 ---
 
+## Where each value goes (quick map)
+
+Both files are gitignored. Create them from the matching `.example` file if
+they do not exist.
+
+| Value | File | Variable |
+| --- | --- | --- |
+| MongoDB connection string | `server/.env` | `MONGODB_URI` |
+| Clerk publishable key | `server/.env` | `CLERK_PUBLISHABLE_KEY` |
+| Clerk secret key | `server/.env` | `CLERK_SECRET_KEY` |
+| Clerk publishable key | `apps/web/.env.local` | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` |
+| Clerk secret key | `apps/web/.env.local` | `CLERK_SECRET_KEY` |
+
+The Clerk keys are the *same two values* pasted into both files: the Next.js
+app needs them to render sign-in UI and read the session, the Express API
+needs them to verify session tokens server-side.
+
+Templates: `server/.env.example`, `apps/web/.env.example`.
+
 ## Notes
 
 - Development (`pk_test`/`sk_test`) and production (`pk_live`/`sk_live`) keys
