@@ -120,6 +120,9 @@ export function InboxView() {
     setSelectedIndex(-1);
   }
 
+  // Distinguishes "your filters matched nothing" from "there is nothing here".
+  const hasActiveFilters = status !== "All" || debouncedSearch.length > 0 || view !== "all";
+
   const metrics = useMemo(() => {
     if (!tickets) return null;
     return {
@@ -207,20 +210,37 @@ export function InboxView() {
               ) : tickets.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7}>
-                    <div className="flex flex-col items-center gap-3 py-12 text-center">
-                      <p className="text-sm font-medium">No tickets found</p>
-                      <p className="text-sm text-muted-foreground">Try adjusting your filters.</p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSearch("");
-                          setParams({ status: null, q: null });
-                        }}
-                      >
-                        Clear filters
-                      </Button>
-                    </div>
+                    {hasActiveFilters ? (
+                      <div className="flex flex-col items-center gap-3 py-12 text-center">
+                        <p className="text-sm font-medium">No tickets match these filters</p>
+                        <p className="text-sm text-muted-foreground">
+                          Try widening your search or clearing the status filter.
+                        </p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSearch("");
+                            setParams({ status: null, q: null });
+                          }}
+                        >
+                          Clear filters
+                        </Button>
+                      </div>
+                    ) : (
+                      // No filters are applied, so the workspace itself is empty —
+                      // saying "adjust your filters" here would be misleading.
+                      <div className="flex flex-col items-center gap-2 py-12 text-center">
+                        <p className="text-sm font-medium">This workspace has no tickets yet</p>
+                        <p className="max-w-md text-sm text-muted-foreground">
+                          Tickets appear here as customers get in touch. To explore SupportFlow
+                          with realistic data, load the demo dataset into this workspace.
+                        </p>
+                        <code className="mt-1 rounded bg-muted px-2 py-1 text-xs">
+                          npm run seed -- --org-id=&lt;your-org-id&gt;
+                        </code>
+                      </div>
+                    )}
                   </TableCell>
                 </TableRow>
               ) : (

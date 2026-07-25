@@ -129,6 +129,27 @@ Web checks: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`.
 dataset by Tobias Bueck. It is reserved for seed enrichment and AI evaluation
 ground truth (triage labels, reference answers); raw CSVs are never committed.
 
+## Authentication & workspaces
+
+Every ticket belongs to an organization (workspace), and the API refuses any
+request without a verified Clerk session. See
+`docs/architecture/phase-3-auth.md`.
+
+- Sign in at <http://localhost:3001>; Clerk requires membership of a workspace.
+- The tenant is resolved from the **signed session token only** — never from
+  anything the client sends.
+- Roles: `org:admin` (administrator), `org:manager` (manager), `org:member`
+  (agent). Reassigning a ticket to someone else requires manager or above.
+- Cross-tenant access returns **404, not 403**, so an id cannot be probed for
+  existence in another workspace.
+
+To load the demo dataset into your own workspace, take the organization id
+from the Clerk dashboard and run:
+
+```bash
+npm run seed --prefix server -- --org-id=org_your_id_here
+```
+
 ## Security notes
 
 - All mutation endpoints are validated with Zod; `PATCH` accepts only a
@@ -140,9 +161,11 @@ ground truth (triage labels, reference answers); raw CSVs are never committed.
 - All user-supplied content is HTML-escaped at render time.
 - The API only accepts `sender: "agent"` messages — customer messages will
   enter via ingestion channels, so clients cannot fabricate them.
-- Optional `API_TOKEN` bearer gate for exposed deployments (stopgap until
-  Clerk authentication lands — until then the API has **no user-level auth**,
-  so do not expose it publicly without the token).
+- Authentication is enforced on every `/api` route (Clerk sessions); tenant
+  isolation is enforced structurally by a repository that cannot build an
+  unscoped query. The isolation suite is mutation-tested.
+- Optional `API_TOKEN` bearer gate as an additional perimeter for exposed
+  deployments, layered on top of session auth.
 - `npm audit`: 0 vulnerabilities in `server/` and `apps/web`.
 
 ## Potential next steps
