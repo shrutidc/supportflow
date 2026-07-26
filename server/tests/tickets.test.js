@@ -338,3 +338,40 @@ test('responses carry security and tracing headers', async () => {
     assert.ok(res.headers['x-request-id']);
     assert.match(res.headers['content-security-policy'], /script-src 'self'/);
 });
+
+// --- infrastructure faults are not application bugs ---
+
+test('an unreachable database returns 503, not a bare 500', async () => {
+    // Simulate the failure mode seen in practice: Atlas refuses the TLS
+    // handshake when the caller's IP is not allow-listed, and Mongoose
+    // surfaces it as MongoServerSelectionError.
+    const original = Ticket.find;
+    Ticket.find = () => {
+        const err = new Error('connection <monitor> to atlas closed');
+        err.name = 'MongoServerSelectionError';
+        throw err;
+    };
+
+    try {
+        const res = await request(app).get('/api/tickets').set(AGENT);
+        assert.equal(res.status, 503);
+        assert.match(res.body.error, /Database is unavailable/);
+    } finally {
+        Ticket.find = original;
+    }
+});
+
+test('a genuine application bug still returns 500', async () => {
+    const original = Ticket.find;
+    Ticket.find = () => {
+        throw new TypeError('cannot read properties of undefined');
+    };
+
+    try {
+        const res = await request(app).get('/api/tickets').set(AGENT);
+        assert.equal(res.status, 500);
+        assert.deepEqual(res.body, { error: 'Internal server error' });
+    } finally {
+        Ticket.find = original;
+    }
+});

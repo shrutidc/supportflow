@@ -290,7 +290,10 @@ export function InboxView() {
  */
 function EmptyWorkspace() {
   const { organization } = useOrganization();
-  const command = `npm run seed --prefix server -- --org-id=${organization?.id ?? "<your-org-id>"}`;
+  // Includes the `cd` deliberately: `--prefix server` is resolved relative to
+  // the shell's working directory, so the bare command fails anywhere but the
+  // repository root, with an ENOENT that does not explain itself.
+  const command = `cd <repo> && npm run seed --prefix server -- --org-id=${organization?.id ?? "<your-org-id>"}`;
 
   return (
     <div className="flex flex-col items-center gap-3 py-12 text-center">
