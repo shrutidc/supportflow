@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Search } from "lucide-react";
+import { Copy, Search } from "lucide-react";
+import { useOrganization } from "@clerk/nextjs";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -230,16 +232,7 @@ export function InboxView() {
                     ) : (
                       // No filters are applied, so the workspace itself is empty —
                       // saying "adjust your filters" here would be misleading.
-                      <div className="flex flex-col items-center gap-2 py-12 text-center">
-                        <p className="text-sm font-medium">This workspace has no tickets yet</p>
-                        <p className="max-w-md text-sm text-muted-foreground">
-                          Tickets appear here as customers get in touch. To explore SupportFlow
-                          with realistic data, load the demo dataset into this workspace.
-                        </p>
-                        <code className="mt-1 rounded bg-muted px-2 py-1 text-xs">
-                          npm run seed -- --org-id=&lt;your-org-id&gt;
-                        </code>
-                      </div>
+                      <EmptyWorkspace />
                     )}
                   </TableCell>
                 </TableRow>
@@ -286,6 +279,42 @@ export function InboxView() {
         navigate · <kbd className="rounded border px-1">Enter</kbd> to open ·{" "}
         <kbd className="rounded border px-1">/</kbd> to search
       </p>
+    </div>
+  );
+}
+
+/**
+ * Shown when the workspace genuinely has no tickets (no filters applied).
+ * Surfaces the organization's own id so loading demo data does not require
+ * hunting for it in the Clerk dashboard.
+ */
+function EmptyWorkspace() {
+  const { organization } = useOrganization();
+  const command = `npm run seed --prefix server -- --org-id=${organization?.id ?? "<your-org-id>"}`;
+
+  return (
+    <div className="flex flex-col items-center gap-3 py-12 text-center">
+      <p className="text-sm font-medium">
+        {organization?.name ? `${organization.name} has no tickets yet` : "No tickets yet"}
+      </p>
+      <p className="max-w-md text-sm text-muted-foreground">
+        Tickets appear here as customers get in touch. To explore SupportFlow with realistic
+        data, load the demo dataset into this workspace:
+      </p>
+      <div className="flex items-center gap-2">
+        <code className="rounded bg-muted px-2 py-1 text-left text-xs break-all">{command}</code>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            navigator.clipboard.writeText(command);
+            toast.success("Command copied");
+          }}
+        >
+          <Copy className="size-3.5" />
+          Copy
+        </Button>
+      </div>
     </div>
   );
 }
