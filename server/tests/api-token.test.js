@@ -1,8 +1,12 @@
 /**
- * Bearer-token gate (API_TOKEN env), which sits in front of Clerk auth as
+ * Shared-secret gate (API_TOKEN env), which sits in front of Clerk auth as
  * an extra perimeter for exposed deployments. Runs in its own process
  * (node --test isolates files), so setting the env before requiring the
  * app is safe.
+ *
+ * These tests mirror the header layout the Next.js proxy actually sends:
+ * the shared secret in `X-Api-Token`, the Clerk session JWT in
+ * `Authorization`. The two must not be read from the same header.
  */
 process.env.NODE_ENV = 'test';
 process.env.API_TOKEN = 'test-secret-token';
@@ -42,17 +46,12 @@ test('rejects API requests without a token, even with a valid session', async ()
 });
 
 test('rejects a wrong token', async () => {
-    const res = await request(app)
-        .get('/api/tickets')
-        .set(AGENT)
-        .set('Authorization', 'Bearer wrong-token');
+    const res = await request(app).get('/api/tickets').set(AGENT).set('X-Api-Token', 'wrong-token');
     assert.equal(res.status, 401);
 });
 
 test('the token alone is not enough — a session is still required', async () => {
-    const res = await request(app)
-        .get('/api/tickets')
-        .set('Authorization', 'Bearer test-secret-token');
+    const res = await request(app).get('/api/tickets').set('X-Api-Token', 'test-secret-token');
     assert.equal(res.status, 401);
 });
 
@@ -60,7 +59,32 @@ test('accepts the correct token together with a valid session', async () => {
     const res = await request(app)
         .get('/api/tickets')
         .set(AGENT)
+        .set('X-Api-Token', 'test-secret-token');
+    assert.equal(res.status, 200);
+    assert.equal(res.body.tickets.length, 20);
+});
+
+/**
+ * Regression: the gate used to read the secret from `Authorization`, the
+ * header Clerk owns. In production the proxy fills it with a session JWT,
+ * so enabling API_TOKEN rejected every request. Sending the secret only in
+ * Authorization must now fail, and the production layout must succeed even
+ * when Authorization carries an unrelated Clerk-shaped value.
+ */
+test('the secret in Authorization does not open the gate', async () => {
+    const res = await request(app)
+        .get('/api/tickets')
+        .set(AGENT)
         .set('Authorization', 'Bearer test-secret-token');
+    assert.equal(res.status, 401);
+});
+
+test('a Clerk JWT in Authorization does not interfere with the gate', async () => {
+    const res = await request(app)
+        .get('/api/tickets')
+        .set(AGENT)
+        .set('Authorization', 'Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6InRlc3QifQ.payload.signature')
+        .set('X-Api-Token', 'test-secret-token');
     assert.equal(res.status, 200);
     assert.equal(res.body.tickets.length, 20);
 });

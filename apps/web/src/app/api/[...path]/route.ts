@@ -17,6 +17,8 @@ import { NextRequest } from "next/server";
 const API_URL = process.env.API_URL ?? "http://localhost:3000";
 
 // Hop-by-hop and host-specific headers must not be forwarded verbatim.
+// `authorization` and `x-api-token` are both credentials this route sets
+// itself, so a browser-supplied value is dropped rather than passed along.
 const STRIPPED_HEADERS = new Set([
   "host",
   "connection",
@@ -24,6 +26,7 @@ const STRIPPED_HEADERS = new Set([
   "transfer-encoding",
   "cookie",
   "authorization",
+  "x-api-token",
 ]);
 
 async function handler(request: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {

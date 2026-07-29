@@ -27,19 +27,35 @@ function loadEnv() {
         .map(s => s.trim())
         .filter(Boolean);
 
-    // Optional bearer token in front of /api, layered on top of Clerk auth.
-    // Empty = not required (local development).
+    // Optional shared secret in front of /api, layered on top of Clerk auth.
+    // Sent as X-Api-Token; Authorization belongs to Clerk. Empty = not
+    // required (local development).
     const apiToken = process.env.API_TOKEN || '';
 
     // Clerk. The SDK reads CLERK_SECRET_KEY from the environment itself;
     // validating here means a misconfigured deployment fails at boot with a
     // clear message instead of 500ing on the first authenticated request.
+    //
+    // BOTH keys are required. @clerk/express needs the publishable key to
+    // build its authentication context and throws on *every* request without
+    // it — while the process still boots and /healthz still answers 200. That
+    // failure mode (green health check, blanket 500s) is why this is checked
+    // at startup rather than left to the first request to discover.
     const clerkSecretKey = process.env.CLERK_SECRET_KEY || '';
-    if (nodeEnv !== 'test' && !clerkSecretKey) {
-        throw new Error(
-            'CLERK_SECRET_KEY is required — the API cannot verify sessions without it. ' +
-                'Copy it from the Clerk dashboard into server/.env'
-        );
+    const clerkPublishableKey = process.env.CLERK_PUBLISHABLE_KEY || '';
+    if (nodeEnv !== 'test') {
+        const missing = [
+            !clerkSecretKey && 'CLERK_SECRET_KEY',
+            !clerkPublishableKey && 'CLERK_PUBLISHABLE_KEY'
+        ].filter(Boolean);
+
+        if (missing.length > 0) {
+            throw new Error(
+                `${missing.join(' and ')} ${missing.length > 1 ? 'are' : 'is'} required — ` +
+                    'the API cannot authenticate requests without both Clerk keys. ' +
+                    'Copy them from the Clerk dashboard (API Keys) into server/.env'
+            );
+        }
     }
 
     // Set to true when running behind a reverse proxy (Railway, etc.) so
@@ -55,6 +71,7 @@ function loadEnv() {
         corsOrigins,
         apiToken,
         clerkSecretKey,
+        clerkPublishableKey,
         trustProxy
     };
 }

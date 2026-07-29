@@ -361,6 +361,27 @@ test('an unreachable database returns 503, not a bare 500', async () => {
     }
 });
 
+test('an invalid Clerk key reports a misconfiguration, not a bare 500', async () => {
+    // Clerk validates keys per request, not at startup, so a placeholder or
+    // typo'd key yields a healthy-looking process whose every /api call
+    // fails. Observed by running the Docker image with CLERK_PUBLISHABLE_KEY
+    // set to a well-formed but fake value.
+    const original = Ticket.find;
+    Ticket.find = () => {
+        throw new Error('Publishable key not valid.');
+    };
+
+    try {
+        const res = await request(app).get('/api/tickets').set(AGENT);
+        assert.equal(res.status, 503);
+        assert.match(res.body.error, /Authentication is misconfigured/);
+        // The response must not echo the SDK's internal detail.
+        assert.doesNotMatch(res.body.error, /Publishable key/);
+    } finally {
+        Ticket.find = original;
+    }
+});
+
 test('a genuine application bug still returns 500', async () => {
     const original = Ticket.find;
     Ticket.find = () => {

@@ -1,3 +1,10 @@
+# The Express API and its datastores. The Next.js frontend runs separately
+# (apps/web: `npm run dev`) and talks to this API through its own proxy.
+#
+# Requires CLERK_SECRET_KEY and CLERK_PUBLISHABLE_KEY in your shell or a root
+# .env file (compose loads ./.env automatically, which also spares you from
+# exporting them for every `docker compose ps/logs/down`). Since Phase 3 the
+# API verifies every session and refuses to boot without both keys.
 services:
   app:
     build: .
@@ -7,11 +14,16 @@ services:
       NODE_ENV: production
       PORT: 3000
       MONGODB_URI: mongodb://mongo:27017/supportflow
+      # Fails fast with a readable message rather than crash-looping the
+      # container on an unset variable.
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:?set CLERK_SECRET_KEY (Clerk dashboard -> API Keys) in your shell or a root .env file}
+      CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY:?set CLERK_PUBLISHABLE_KEY (Clerk dashboard -> API Keys) in your shell or a root .env file}
     depends_on:
       mongo:
         condition: service_started
-    # Seed demo data once the stack is up:
-    #   docker compose exec app node server/seed.js
+    # Seed demo data into a workspace once the stack is up. Pass the Clerk
+    # organization id you signed into, or omit --org-id for the demo org:
+    #   docker compose exec app node server/seed.js --org-id=org_xxx
 
   mongo:
     image: mongo:7

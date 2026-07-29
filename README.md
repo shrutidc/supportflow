@@ -164,9 +164,12 @@ npm run seed --prefix server -- --org-id=org_your_id_here
 - Authentication is enforced on every `/api` route (Clerk sessions); tenant
   isolation is enforced structurally by a repository that cannot build an
   unscoped query. The isolation suite is mutation-tested.
-- Optional `API_TOKEN` bearer gate as an additional perimeter for exposed
-  deployments, layered on top of session auth.
-- `npm audit`: 0 vulnerabilities in `server/` and `apps/web`.
+- Optional `API_TOKEN` shared-secret gate as an additional perimeter for
+  exposed deployments, layered on top of session auth. Sent as `X-Api-Token`;
+  `Authorization` is reserved for the Clerk session JWT.
+- `npm audit`: 0 vulnerabilities in `server/`, and 0 in the `apps/web`
+  production dependency tree. The web dev tree carries 11 advisories, all
+  reachable only through ESLint's `minimatch`; they ship nothing.
 
 ## Potential next steps
 

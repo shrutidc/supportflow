@@ -55,7 +55,9 @@ function createApp({ authMiddleware } = {}) {
         );
     }
 
-    // Optional bearer-token gate (API_TOKEN env) — see middleware/api-token.js.
+    // Optional shared-secret gate (API_TOKEN env, sent as X-Api-Token).
+    // Must stay ahead of Clerk and must not read Authorization — see
+    // middleware/api-token.js.
     app.use('/api', apiToken);
 
     // Authentication. Clerk parses and verifies the session token; requireAuth

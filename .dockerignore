@@ -5,3 +5,10 @@
 docs
 scratchpad
 *.log
+
+# The Next.js frontend deploys separately; its source and build output have
+# no business inside the API image.
+apps/web
+
+# Raw datasets are gitignored, but keep them out of build context too.
+customer_support
