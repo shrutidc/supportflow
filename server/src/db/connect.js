@@ -3,17 +3,47 @@ const env = require('../config/env');
 const logger = require('../lib/logger');
 
 /**
+ * Cached connection, shared across warm serverless invocations.
+ *
+ * A serverless container is reused between requests, so connecting per
+ * request would open a fresh pool every time and exhaust the Atlas
+ * connection limit. Holding the *promise* (not just the connection) also
+ * means concurrent cold requests wait on one attempt instead of racing.
+ */
+let connectionPromise = null;
+
+/**
  * Connects to MongoDB. Prefers MONGODB_URI; in non-production
  * environments falls back to an in-memory server seeded with demo data
  * so the app runs with zero external dependencies.
  *
- * Resolves only once a connection is established, so the HTTP server
- * can defer listening until the database is ready.
+ * Idempotent: repeated calls reuse the first connection. Resolves only once
+ * a connection is established, so the HTTP server can defer listening until
+ * the database is ready.
  */
-async function connectDatabase() {
+function connectDatabase() {
+    if (!connectionPromise) {
+        connectionPromise = openConnection().catch(err => {
+            // Clear the cache so the next invocation retries rather than
+            // replaying a transient failure for the life of the container.
+            connectionPromise = null;
+            throw err;
+        });
+    }
+    return connectionPromise;
+}
+
+async function openConnection() {
     if (env.mongoUri) {
         try {
-            await mongoose.connect(env.mongoUri, { serverSelectionTimeoutMS: 5000 });
+            await mongoose.connect(env.mongoUri, {
+                serverSelectionTimeoutMS: 5000,
+                // Each serverless container keeps its own pool, and Atlas M0
+                // allows only 500 connections in total. The default of 100
+                // per container would exhaust that after a handful of
+                // containers; this workload needs a couple at most.
+                maxPoolSize: 5
+            });
             logger.info('MongoDB connected', { source: 'uri' });
             return { source: 'uri' };
         } catch (err) {
@@ -41,6 +71,7 @@ async function connectDatabase() {
 }
 
 async function disconnectDatabase(handle) {
+    connectionPromise = null;
     await mongoose.disconnect();
     if (handle && handle.memoryServer) {
         await handle.memoryServer.stop();

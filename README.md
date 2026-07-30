@@ -1,192 +1,193 @@
 # SupportFlow
 
-SupportFlow is an enterprise-style **customer support ticket console** that models how a mid-size B2B SaaS team triages, assigns, escalates, and resolves customer issues. The frontend is built with vanilla **HTML, CSS, and JavaScript**; a **Node.js + Express + MongoDB** backend persists and serves the tickets.
+**A multi-tenant customer support platform** — ticket triage, ownership, and
+escalation for a B2B SaaS support team, built as a production-shaped
+application rather than a CRUD demo.
 
-## Objectives & goals
+> **Live demo:** _pending deployment_ · **Demo login:** _pending_
 
-- Model a realistic **support ticket lifecycle** (not just a to-do list) — ownership, escalation, priority, and SLA behavior.
-- Practice a **full-stack CRUD application** end to end: static UI → REST API → database, with seed data for a believable demo.
-- Keep the frontend dependency-free (vanilla JS) to demonstrate core DOM/state work without a framework.
+---
 
-## Overview
+## What it is
 
-Support agents work two views: a **Ticket Queue (Dashboard)** for triage and a **Ticket Detail** page for the conversation and metadata. Tickets move through a defined status lifecycle, can be claimed by a single agent, and escalate into an engineering queue with a tighter SLA.
+Support agents work two surfaces: an **inbox** for triage and filtering, and a
+**ticket workspace** for the conversation, ownership, and SLA state. Tickets
+move through a defined lifecycle, can be claimed atomically by one agent, and
+escalate into an engineering queue with a tightened SLA.
 
-## Features
+Every record belongs to an **organization**. A signed-in agent can only ever
+see their own workspace's data, and that guarantee is enforced structurally —
+see [Tenant isolation](#tenant-isolation-the-part-worth-reading) below.
 
-- **Ticket queue dashboard** seeded with realistic B2B SaaS issues
-- **Status lifecycle:** `New → In Progress → Escalated → Closed`
-- **Ownership model:** tickets may start unassigned; once claimed they have single-agent ownership
-- **Escalation logic:** reassign to the **Engineering Queue**, bump **priority to High**, apply a **tighter SLA** indicator
-- **Status filter buttons**, **clickable ticket rows**, a **collapsible sidebar**, and **Light/Dark mode**
+## Architecture
 
-## Methodology / how it's built
-
-- **Frontend** renders ticket rows and detail views from data returned by the API (`main.js`, `ticket.js`), with all styling in `styles.css`.
-- **Backend** (`server/`) is an Express app exposing REST endpoints backed by a Mongoose `Ticket` model (`server/models/Ticket.js`); `seed.js` wipes and repopulates the collection with 20 demo tickets across Billing, Integration, Bug, and Account Access.
-- The Express server also serves the static frontend, so the whole app runs from one origin.
-
-## Sample data
-
-Built around a fictional mid-size B2B SaaS AI workflow-automation platform. **20 tickets** across four categories — **Billing, Integration, Bug, Account Access** — loaded via `npm run seed`.
-
-## Project structure
-
-```txt
-SupportFlow/
-```txt
-SupportFlow/
-├─ index.html          # entry point
-├─ dashboard.html      # ticket queue + filters
-├─ ticket.html         # ticket detail (conversation + metadata)
-├─ reports.html        # placeholder (enterprise nav realism)
-├─ settings.html       # placeholder (enterprise nav realism)
-├─ styles.css
-├─ data.js             # original static seed objects
-├─ main.js             # dashboard rendering + filters
-├─ ticket.js           # ticket detail behavior
-├─ Dockerfile / docker-compose.yml
-├─ docs/legacy/        # quarantined, never-wired AI scaffolding (reference only)
-└─ server/
-   ├─ server.js        # thin bootstrap: validate env → connect DB → listen
-   ├─ seed.js          # DB seeding entry point
-   ├─ models/Ticket.js # Mongoose schema
-   ├─ tests/           # supertest + node:test API suite
-   └─ src/
-      ├─ app.js           # Express app assembly (no port binding; test-friendly)
-      ├─ config/env.js    # validated environment config
-      ├─ db/              # connection (Atlas or in-memory fallback) + seeding
-      ├─ routes/          # HTTP routing
-      ├─ controllers/     # request/response translation
-      ├─ services/        # business rules (status side effects, atomic claim)
-      ├─ repositories/    # all Mongoose access
-      ├─ validators/      # Zod request schemas
-      ├─ middleware/      # validation, request IDs, central error handler
-      └─ lib/             # logger, async handler, HttpError
+```mermaid
+flowchart LR
+    B[Browser] -->|Clerk session cookie| W["Next.js 16<br/>App Router"]
+    W -->|"proxy.ts → auth.protect"| W
+    W -->|"/api/* handler<br/>mints Bearer JWT server-side"| A["Express API"]
+    A --> M["helmet · CORS · rate limit<br/>X-Api-Token gate"]
+    M --> C["clerkMiddleware → requireAuth<br/>{userId, organizationId, role}"]
+    C --> S["routes → controllers → services"]
+    S --> R["ticketRepo.forOrg(orgId)"]
+    R --> D[("MongoDB Atlas")]
 ```
 
-## Setup & running locally
+The browser never holds an API token and never calls the API directly. The
+Next.js route handler mints a short-lived Clerk token per request, server-side.
 
-**Prerequisites:** Node.js 18+. A MongoDB connection string is optional —
-without one the server boots a seeded in-memory database.
+**Why not a `next.config` rewrite?** A rewrite forwards browser cookies, which
+works when both services share `localhost` and silently fails in production
+where the frontend and API sit on different domains. The explicit handler
+behaves identically in both.
+
+## Tech stack
+
+| Layer | |
+| --- | --- |
+| Frontend | Next.js 16 (App Router), TypeScript, Tailwind CSS, shadcn/ui, TanStack Query |
+| API | Node.js, Express 5, Mongoose, Zod |
+| Auth & tenancy | Clerk (users, organizations, roles) |
+| Database | MongoDB Atlas |
+| Tooling | Docker Compose, GitHub Actions, Vitest, node:test + Supertest |
+
+## Tenant isolation, the part worth reading
+
+Three independent layers, so a single mistake is not a data breach:
+
+1. **Single source of truth.** `organizationId` comes from the signed Clerk
+   session and nowhere else. A forged `organizationId` in a request body loses
+   to the session — there is a test asserting exactly that.
+2. **Structural scoping.** `ticketRepo` exposes *only* `forOrg(organizationId)`,
+   and calling it without one throws. There is no unscoped query available to
+   call by accident, so a future endpoint cannot forget to scope a read.
+3. **No existence oracle.** Cross-tenant access returns **404, never 403** — a
+   403 would confirm that a ticket id exists in someone else's workspace.
+
+**Verified, not assumed:** the isolation suite is mutation-tested. Deleting the
+organization filter from the repository makes 8 of the 10 isolation tests fail.
+A suite that still passes against deliberately broken code is worse than no
+suite, so this check is part of the definition of done.
+
+## Other things a reviewer might look for
+
+- **Atomic claim.** Taking ownership is one conditional `findOneAndUpdate`, not
+  read-then-write, so two agents cannot both believe they claimed a ticket.
+- **Faults are classified, not collapsed.** An unreachable database returns
+  **503** with a plain explanation; a misconfigured Clerk key returns **503**
+  saying so; only genuine application bugs return 500. Debugging a deployment
+  should not start with a stack trace.
+- **Mass assignment is impossible.** `PATCH` accepts a Zod whitelist
+  (`status`, `priority`, `assignedTo`); unknown keys are stripped.
+- **Customer messages cannot be forged.** The API accepts only
+  `sender: "agent"`. Customer messages will arrive through ingestion channels.
+- **Layered by intent.** `routes → controllers → services → repositories`.
+  No function mixes HTTP handling, business rules, and database access.
+
+## Running locally
+
+**Prerequisites:** Node.js 20+, a MongoDB connection string, and Clerk API keys
+(free tier).
 
 ```bash
+# 1. API
 cd server
-cp .env.example .env      # then edit .env with YOUR MongoDB URI — never commit it
+cp .env.example .env        # fill in MONGODB_URI + both Clerk keys
 npm install
-npm run seed              # wipes + loads 20 sample tickets (needs MONGODB_URI)
-npm start                 # or: npm run dev  (nodemon)
+npm run seed                # loads demo tickets
+npm run dev                 # :3000
 ```
-
-Open <http://localhost:3000/index.html>.
-
-**With Docker:**
 
 ```bash
-docker compose up --build
-docker compose exec app node server/seed.js   # seed demo data (first run)
+# 2. Frontend, in a second terminal
+cd apps/web
+cp .env.example .env.local  # fill in Clerk keys + API_URL
+npm install
+npm run dev                 # :3001
 ```
 
-> ⚠️ **Security:** never commit your real `.env`. It is gitignored here. If a connection string is ever exposed, **rotate the database password immediately** — a leaked URI must be treated as compromised.
-
-## Tests
-
-```bash
-cd server
-npm test
-```
-
-Characterization + security tests for the ticket API (list/filter/search,
-claim atomicity, escalation side effects, validation, mass-assignment
-protection). Runs against an in-memory MongoDB; CI runs the same suite on
-every push and pull request.
-
-## Visualizations
-
-> _Add a dashboard screenshot to showcase the UI, e.g._ `![Dashboard](docs/dashboard.png)`.
-
-## Modern frontend (apps/web)
-
-The v2 Next.js frontend (Next 16 App Router, TypeScript, Tailwind, shadcn/ui,
-TanStack Query) now runs at parity with the legacy queue and ticket detail
-pages; the vanilla frontend stays available as a fallback until every page is
-migrated. See `docs/architecture/phase-2-frontend.md` for the parity map.
-
-```bash
-# Terminal 1 — API (also serves the legacy frontend at :3000)
-cd server && npm run dev
-
-# Terminal 2 — modern frontend at :3001 (proxies /api to :3000)
-cd apps/web && npm run dev
-```
-
-Web checks: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`.
-
-## Dataset
-
-`customer_support/` (gitignored, ~135k rows) is the Kaggle
-[multilingual-customer-support-tickets](https://www.kaggle.com/datasets/tobiasbueck/multilingual-customer-support-tickets)
-dataset by Tobias Bueck. It is reserved for seed enrichment and AI evaluation
-ground truth (triage labels, reference answers); raw CSVs are never committed.
-
-## Authentication & workspaces
-
-Every ticket belongs to an organization (workspace), and the API refuses any
-request without a verified Clerk session. See
-`docs/architecture/phase-3-auth.md`.
-
-- Sign in at <http://localhost:3001>; Clerk requires membership of a workspace.
-- The tenant is resolved from the **signed session token only** — never from
-  anything the client sends.
-- Roles: `org:admin` (administrator), `org:manager` (manager), `org:member`
-  (agent). Reassigning a ticket to someone else requires manager or above.
-- Cross-tenant access returns **404, not 403**, so an id cannot be probed for
-  existence in another workspace.
-
-To load the demo dataset into your own workspace, take the organization id
-from the Clerk dashboard and run:
+Open <http://localhost:3001>. Clerk requires membership of a workspace, so
+create one on first sign-in, then seed it with your own organization id:
 
 ```bash
 npm run seed --prefix server -- --org-id=org_your_id_here
 ```
 
-## Security notes
+**With Docker** (API and MongoDB):
 
-- All mutation endpoints are validated with Zod; `PATCH` accepts only a
-  whitelist of fields (`status`, `priority`, `assignedTo`).
-- Ticket claiming is atomic (single conditional update — no double-claim race).
-- helmet security headers **including CSP** (`script-src 'self'` — no inline
-  scripts anywhere), closed-by-default CORS (`CORS_ORIGINS` allowlist), API
-  rate limiting, 100kb JSON body limit, regex-escaped search input.
-- All user-supplied content is HTML-escaped at render time.
-- The API only accepts `sender: "agent"` messages — customer messages will
-  enter via ingestion channels, so clients cannot fabricate them.
-- Authentication is enforced on every `/api` route (Clerk sessions); tenant
-  isolation is enforced structurally by a repository that cannot build an
-  unscoped query. The isolation suite is mutation-tested.
-- Optional `API_TOKEN` shared-secret gate as an additional perimeter for
-  exposed deployments, layered on top of session auth. Sent as `X-Api-Token`;
-  `Authorization` is reserved for the Clerk session JWT.
-- `npm audit`: 0 vulnerabilities in `server/`, and 0 in the `apps/web`
-  production dependency tree. The web dev tree carries 11 advisories, all
-  reachable only through ESLint's `minimatch`; they ship nothing.
+```bash
+CLERK_SECRET_KEY=sk_... CLERK_PUBLISHABLE_KEY=pk_... docker compose up --build
+```
 
-## Potential next steps
+## Tests
 
-The v2 rebuild into an AI-native support platform is underway — the layered
-API, modern frontend, tests, and CI are in place. Still ahead:
+```bash
+cd server   && npm test                     # 54 tests
+cd apps/web && npm test && npm run typecheck && npm run build
+```
 
-- Real **auth / multi-tenant workspaces** (Clerk + organization isolation)
-- AI ticket **summarization and triage**, and Claude-generated response suggestions
-- **Semantic search** across ticket history via vector embeddings
-- Auto-generated **knowledge base** from resolved tickets, plus SLA monitoring and analytics
-- Background job processing, an AI evaluation dashboard, and production deployment
+The API suite covers the ticket workflow (filtering, claim atomicity,
+escalation side effects, validation, mass-assignment protection), tenant
+isolation, the shared-secret gate, environment validation, and fault
+classification. It runs against an in-memory MongoDB, so it needs no
+credentials. CI runs everything on every push and pull request.
 
-## Individual contributions
+## Project structure
 
-Sole author. I built the vanilla-JS frontend (dashboard, ticket detail, filters, theming), the Express + MongoDB backend and `Ticket` schema, and the seed pipeline that maps the original static data into the database.
+```txt
+supportflow/
+├─ apps/web/              # Next.js frontend
+│  └─ src/
+│     ├─ app/             # App Router pages + authenticated /api proxy
+│     ├─ components/      # UI, ticket inbox and workspace
+│     └─ lib/api/         # typed client, Zod response schemas, query hooks
+├─ server/                # Express API
+│  ├─ api/index.js        # serverless entry (reuses createApp)
+│  ├─ models/             # Mongoose schemas
+│  ├─ scripts/migrations/ # idempotent, --dry-run capable
+│  └─ src/
+│     ├─ app.js           # app assembly, no port binding — test friendly
+│     ├─ routes/ controllers/ services/ repositories/
+│     ├─ validators/      # Zod request schemas
+│     ├─ middleware/      # auth, validation, request ids, error handler
+│     └─ config/env.js    # validated environment, fails fast at boot
+└─ docs/architecture/     # design decisions and their rationale
+```
 
-## Tech stack
+## Dataset
 
-`HTML5` · `CSS3 (Flexbox/Grid)` · `JavaScript` · `Node.js` · `Express` · `MongoDB / Mongoose` · `Zod` · `Docker` · `GitHub Actions`
-`Next.js 16` · `TypeScript` · `Tailwind CSS` · `shadcn/ui` · `TanStack Query` · `Vitest`
+`customer_support/` (gitignored) is the Kaggle
+[multilingual customer support tickets](https://www.kaggle.com/datasets/tobiasbueck/multilingual-customer-support-tickets)
+dataset by Tobias Bueck — ~136k tickets carrying human `type`, `queue`, and
+`priority` labels. Those labels are ground truth for evaluating automated
+triage. Raw CSVs are never committed.
+
+## Roadmap
+
+Next, in order:
+
+1. **AI triage and summarization** — a FastAPI service returning schema-validated
+   structured output, with every recommendation stored as an auditable decision
+   (model, prompt version, confidence, evidence, latency, cost) and applied only
+   by a human.
+2. **Measured quality** — a TF-IDF baseline the LLM has to beat, scored on the
+   same held-out set: per-class precision and recall, calibration, cost per
+   1000 tickets, p95 latency.
+3. **Semantic retrieval** — embeddings and vector search surfacing similar
+   resolved tickets with citations.
+
+Deliberately out of scope: background job queues, workflow automation
+builders, and third-party integrations.
+
+## Notes
+
+- The original vanilla HTML/JS frontend (`index.html`, `main.js`, `ticket.js`)
+  remains in the repository for reference but is **no longer served** — it has
+  no way to hold a Clerk session. The Next.js app is the only interface.
+- `npm audit`: clean in `server/` and in the `apps/web` production dependency
+  tree. The web dev tree carries advisories reachable only through ESLint's
+  `minimatch`, which ship nothing.
+
+## Author
+
+Shruti Chougule — sole author.
