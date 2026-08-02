@@ -158,9 +158,14 @@ supportflow/
 
 `customer_support/` (gitignored) is the Kaggle
 [multilingual customer support tickets](https://www.kaggle.com/datasets/tobiasbueck/multilingual-customer-support-tickets)
-dataset by Tobias Bueck — ~136k tickets carrying human `type`, `queue`, and
-`priority` labels. Those labels are ground truth for evaluating automated
-triage. Raw CSVs are never committed.
+dataset by Tobias Bueck. **67,890 tickets** across five files, of which 52,587
+carry all three human labels (`type`, `queue`, `priority`) and 29,652 of those
+are English. Those labels are the ground truth for evaluating automated triage.
+Raw CSVs are never committed.
+
+(Counting lines gives ~136k; ticket bodies contain newlines inside quoted
+fields, so `wc -l` overstates the corpus by roughly 2×. See
+[`notebooks/01-dataset-exploration.ipynb`](notebooks/01-dataset-exploration.ipynb).)
 
 **What is real and what is simulated.** The subjects, bodies, agent replies,
 and all three labels are the dataset's. The corpus carries no identities,
