@@ -4,7 +4,7 @@
 escalation for a B2B SaaS support team, built as a production-shaped
 application rather than a CRUD demo.
 
-> **Live demo:** _pending deployment_ · **Demo login:** _pending_
+> **Live demo:** <https://supportflow-lake.vercel.app> · **Demo login:** _pending_
 
 ---
 

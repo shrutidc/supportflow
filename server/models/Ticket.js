@@ -34,10 +34,32 @@ const ticketSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    // Two vocabularies coexist deliberately. The first four are the original
+    // hand-authored demo taxonomy, still used by the built-in seed that the
+    // test suite depends on. The last four are ITIL-style types carried in
+    // from the labelled Kaggle dataset, which is the ground truth the AI
+    // triage evaluation scores against — remapping them would destroy the
+    // labels that make that evaluation meaningful.
     category: {
         type: String,
-        enum: ['Billing', 'Integration', 'Bug', 'Account Access'],
+        enum: [
+            'Billing',
+            'Integration',
+            'Bug',
+            'Account Access',
+            'Incident',
+            'Request',
+            'Problem',
+            'Change'
+        ],
         required: true
+    },
+    // Routing destination, e.g. "Technical Support". Present in the target
+    // domain model and supplied by the dataset's `queue` label; null for the
+    // original hand-authored tickets, which predate the concept.
+    queue: {
+        type: String,
+        default: null
     },
     priority: {
         type: String,
@@ -88,6 +110,21 @@ const ticketSchema = new mongoose.Schema({
         },
         suggestedReply: { type: String },
         recommendedAction: { type: String }
+    },
+    /**
+     * The human labels this ticket arrived with, for tickets imported from the
+     * labelled dataset. Absent on hand-authored tickets.
+     *
+     * Kept separate from `category`/`queue`/`priority` because those are
+     * working state: an agent reassigns a queue, an accepted AI triage bumps a
+     * priority. Once that happens the field no longer says what a human
+     * originally judged, and the ground truth an evaluation scores against
+     * would be silently corrupted by ordinary use of the product.
+     */
+    datasetLabels: {
+        type: { type: String },
+        queue: { type: String },
+        priority: { type: String }
     },
     messages: [messageSchema]
 });
