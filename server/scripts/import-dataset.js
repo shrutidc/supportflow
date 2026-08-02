@@ -73,51 +73,97 @@ function buildCustomer(seed) {
     };
 }
 
-/**
- * Status is drawn from a fixed mix rather than inferred from whether the row
- * has an agent answer. Almost every row in the dataset does, so inferring it
- * produced an inbox that was 58% Closed with four open tickets — an accurate
- * reflection of the corpus and a useless demo, since a support queue with no
- * live work in it is the one thing an inbox should never look like.
- *
- * A ticket only carries the agent's reply once it has left New, so the
- * conversation still matches the state.
- */
-const STATUS_MIX = [
-    { status: 'New', assignedTo: null, upTo: 22 },
-    { status: 'In Progress', assignedTo: 'Support Team', upTo: 54 },
-    { status: 'Escalated', assignedTo: 'Engineering Queue', upTo: 66 },
-    { status: 'Closed', assignedTo: 'Support Team', upTo: 100 }
-];
-
-function deriveWorkflow(row, seed) {
-    // Without a reply to show, a worked ticket would render as an empty
-    // thread, so those stay New regardless of the roll.
-    if (!row.answer || !row.answer.trim()) {
-        return { status: 'New', assignedTo: null };
-    }
-    const roll = seededInt(seed + 's', 100);
-    return STATUS_MIX.find(s => roll < s.upTo);
-}
-
 const SLA_HOURS = { High: 4, Medium: 24, Low: 72 };
+
+/**
+ * How long work actually takes, in hours: [fastest, slowest] by priority.
+ *
+ * Ranges are set so roughly three quarters of completed work lands inside its
+ * SLA. Wider ranges breached on 61% of closed tickets, which reads as a broken
+ * system rather than a busy one. The story the seeded data tells is that work
+ * which gets picked up is mostly on time, and it is the untriaged backlog that
+ * breaches — which is what makes the SLA-risk view worth having.
+ */
+const HANDLING_HOURS = { High: [0.3, 5.2], Medium: [2, 31], Low: [6, 94] };
+
+/**
+ * Workflow state is derived from how old a ticket is and how long its priority
+ * takes to handle, rather than drawn from a fixed mix.
+ *
+ * The distribution of arrivals is invented — the corpus carries no timestamps
+ * — but it has to be *internally consistent*, because the analytics dashboard
+ * computes resolution time, SLA compliance, and backlog age from these fields.
+ * Two earlier shortcuts made those metrics meaningless: status was drawn
+ * independently of age, so a 29-day-old ticket was as likely to be New as one
+ * from this morning; and every resolved ticket closed exactly 45 minutes after
+ * it opened, collapsing resolution time to a single spike. Charts built on
+ * that look plausible and describe nothing.
+ *
+ * So: older tickets are more likely resolved, high priority is handled faster,
+ * escalation concentrates in high priority, and a slice never resolves at all
+ * — real queues always carry stuck work, and without it backlog age has no
+ * tail worth plotting.
+ */
+function deriveWorkflow(row, seed, priority, ageHours) {
+    // No reply to show means a worked ticket would render an empty thread.
+    if (!row.answer || !row.answer.trim()) {
+        return { status: 'New', assignedTo: null, closedAfterHours: null };
+    }
+
+    const [fastest, slowest] = HANDLING_HOURS[priority];
+    // Tenths of an hour, so durations do not land on a coarse grid.
+    const handlingHours = fastest + seededInt(seed + 'w', (slowest - fastest) * 10) / 10;
+
+    // The modelled desk is running a backlog: a large minority of tickets are
+    // never worked to completion. Without this, a 14-day window at this
+    // arrival rate resolves almost everything — which is what a healthy desk
+    // genuinely looks like, and leaves an inbox of 340 Closed tickets and one
+    // New. A backlog is both common in practice and the condition that makes
+    // SLA risk and escalation worth showing at all.
+    const backlogged = seededInt(seed + 'k', 100) < 30;
+    if (!backlogged && ageHours > handlingHours) {
+        return { status: 'Closed', assignedTo: 'Support Team', closedAfterHours: handlingHours };
+    }
+
+    // Still open. Freshly arrived work has not been triaged yet.
+    if (ageHours < 8) {
+        return { status: 'New', assignedTo: null, closedAfterHours: null };
+    }
+
+    // Older open work splits between what is sitting untriaged and what
+    // someone owns. Escalation concentrates in high priority.
+    const roll = seededInt(seed + 'e', 100);
+    if (roll < 32) {
+        return { status: 'New', assignedTo: null, closedAfterHours: null };
+    }
+    const escalated = roll < (priority === 'High' ? 60 : 42);
+    return escalated
+        ? { status: 'Escalated', assignedTo: 'Engineering Queue', closedAfterHours: null }
+        : { status: 'In Progress', assignedTo: 'Support Team', closedAfterHours: null };
+}
 
 function toTicket(row, index, organizationId) {
     const seed = `${index}:${row.subject}`;
     const priority = PRIORITY_MAP[String(row.priority || '').toLowerCase()] || 'Medium';
-    const { status, assignedTo } = deriveWorkflow(row, seed);
 
-    // Spread arrivals across the last 30 days so backlog-age and volume
-    // charts have a real distribution instead of one spike.
-    const ageMinutes = seededInt(seed + 't', 30 * 24 * 60);
-    const createdAt = new Date(Date.now() - ageMinutes * 60 * 1000);
+    // Arrivals spread across the last 14 days, in tenths of an hour. A wider
+    // window at this volume leaves almost nothing open, since handling times
+    // top out around 140 hours.
+    const ageHours = seededInt(seed + 't', 14 * 24 * 10) / 10;
+    const createdAt = new Date(Date.now() - ageHours * 3600 * 1000);
+
+    const { status, assignedTo, closedAfterHours } = deriveWorkflow(row, seed, priority, ageHours);
 
     const messages = [{ sender: 'customer', body: row.body.trim(), timestamp: createdAt }];
     if (status !== 'New') {
+        // A closed ticket's last reply is what closed it. An open one was
+        // last touched partway through its handling time.
+        const replyAfterHours =
+            closedAfterHours ?? Math.min(ageHours, HANDLING_HOURS[priority][0]) / 2 + 0.5;
         messages.push({
             sender: 'agent',
             body: row.answer.trim(),
-            timestamp: new Date(createdAt.getTime() + 45 * 60 * 1000)
+            timestamp: new Date(createdAt.getTime() + replyAfterHours * 3600 * 1000)
         });
     }
 
