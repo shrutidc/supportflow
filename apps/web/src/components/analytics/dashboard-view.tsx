@@ -184,7 +184,10 @@ function Loaded({ data }: { data: AnalyticsOverview }) {
       </ChartCard>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <ChartCard title="Open tickets by queue" description="Where unresolved work sits">
+        <ChartCard
+          title="Open tickets by queue"
+          description="Where unresolved work sits — busiest 8 queues"
+        >
           <ResponsiveContainer width="100%" height={260}>
             <BarChart
               data={byQueue}

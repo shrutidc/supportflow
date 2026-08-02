@@ -14,15 +14,6 @@ const Ticket = require('../../models/Ticket');
 
 const OPEN_STATUSES = ['New', 'In Progress', 'Escalated'];
 
-/** Buckets for how long open work has been waiting, in hours. */
-const BACKLOG_BUCKETS = [
-    { label: '< 4h', maxHours: 4 },
-    { label: '4–24h', maxHours: 24 },
-    { label: '1–3d', maxHours: 72 },
-    { label: '3–7d', maxHours: 168 },
-    { label: '> 7d', maxHours: Infinity }
-];
-
 function countBy(field) {
     return [{ $group: { _id: `$${field}`, count: { $sum: 1 } } }, { $sort: { count: -1 } }];
 }
@@ -40,7 +31,13 @@ function forOrg(organizationId) {
          */
         async overview({ days }) {
             const now = new Date();
-            const since = new Date(now.getTime() - days * 24 * 3600 * 1000);
+
+            // Aligned to the start of the earliest UTC day the series will
+            // show. A rolling `now - days` cutoff lands mid-day, so tickets
+            // from earlier that same day are aggregated and then silently
+            // dropped by the service, which buckets by calendar date.
+            const since = new Date(now.getTime() - (days - 1) * 24 * 3600 * 1000);
+            since.setUTCHours(0, 0, 0, 0);
 
             const [result] = await Ticket.aggregate([
                 { $match: { organizationId } },
@@ -48,8 +45,12 @@ function forOrg(organizationId) {
                     $facet: {
                         byStatus: countBy('status'),
                         byPriority: countBy('priority'),
+                        // Open work only. Counting closed tickets here would
+                        // answer "where has volume come from historically",
+                        // which is a different question from the operational
+                        // one this feeds: where unresolved work is sitting now.
                         byQueue: [
-                            { $match: { queue: { $ne: null } } },
+                            { $match: { queue: { $ne: null }, status: { $in: OPEN_STATUSES } } },
                             ...countBy('queue'),
                             { $limit: 8 }
                         ],
@@ -197,4 +198,4 @@ function forOrg(organizationId) {
     };
 }
 
-module.exports = { forOrg, BACKLOG_BUCKETS, OPEN_STATUSES };
+module.exports = { forOrg, OPEN_STATUSES };

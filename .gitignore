@@ -1,11 +1,17 @@
 node_modules
 server/node_modules
 .DS_Store
-.env
 
 # environment / secrets
 .env
 server/.env
 
 .claude/settings.local.json
+
+# Raw datasets — large, and redistributing them is not ours to do.
 customer_support/
+
+# Jupyter writes these the moment a notebook is opened.
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+__pycache__/

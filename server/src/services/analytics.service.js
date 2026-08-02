@@ -1,5 +1,4 @@
 const analyticsRepo = require('../repositories/analytics.repo');
-const { BACKLOG_BUCKETS } = require('../repositories/analytics.repo');
 
 /**
  * Operational metrics for a workspace.
@@ -11,6 +10,19 @@ const { BACKLOG_BUCKETS } = require('../repositories/analytics.repo');
  */
 
 const DEFAULT_DAYS = 14;
+
+/**
+ * How long open work has been waiting. These are presentation buckets, not a
+ * storage concern — the repository returns raw ages and this decides how they
+ * are grouped for display.
+ */
+const BACKLOG_BUCKETS = [
+    { label: '< 4h', maxHours: 4 },
+    { label: '4–24h', maxHours: 24 },
+    { label: '1–3d', maxHours: 72 },
+    { label: '3–7d', maxHours: 168 },
+    { label: '> 7d', maxHours: Infinity }
+];
 
 /** Nearest-rank percentile. `sorted` must be ascending and non-empty. */
 function percentile(sorted, p) {

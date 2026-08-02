@@ -150,10 +150,26 @@ test('groupings are present and scoped', async () => {
     assert.equal(statuses.Closed, 2);
     assert.equal(statuses.Escalated, 1);
 
-    const queues = Object.fromEntries(res.body.byQueue.map(r => [r.queue, r.count]));
-    assert.equal(queues['Billing and Payments'], 1);
     // The other tenant's Low-priority ticket must not appear.
     assert.ok(!res.body.byPriority.some(r => r.priority === 'Low'));
+});
+
+test('the queue breakdown counts open work only, not historical volume', async () => {
+    const res = await request(app).get('/api/analytics/overview').set(AGENT);
+    const queues = Object.fromEntries(res.body.byQueue.map(r => [r.queue, r.count]));
+
+    // Four tickets sit in Technical Support, but AN-1 and AN-2 are Closed.
+    // The dashboard presents this as "where unresolved work sits", so
+    // including resolved tickets would make the chart answer a different
+    // question from the one its label asks.
+    assert.equal(queues['Technical Support'], 2);
+    assert.equal(queues['Billing and Payments'], 1);
+
+    // Never more than the open population. Not equal in general: the chart
+    // takes the top 8 queues, and tickets predating the queue field carry
+    // none — both of which put open tickets outside this breakdown.
+    const totalCharted = res.body.byQueue.reduce((sum, r) => sum + r.count, 0);
+    assert.ok(totalCharted <= res.body.totals.open);
 });
 
 test('the volume series covers every day in the window, including quiet ones', async () => {
