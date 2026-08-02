@@ -65,6 +65,43 @@ export type Message = z.infer<typeof messageSchema>;
 
 export type TicketView = "all" | "assigned" | "escalations";
 
+/**
+ * Operational metrics. Every rate is nullable: a workspace with nothing closed
+ * yet has no compliance rate, and rendering 0% there would read as total
+ * failure rather than "no data".
+ */
+export const analyticsOverviewSchema = z.object({
+  periodDays: z.number(),
+  totals: z.object({
+    all: z.number(),
+    open: z.number(),
+    closed: z.number(),
+    escalated: z.number(),
+    unassigned: z.number(),
+  }),
+  byStatus: z.array(z.object({ status: z.string(), count: z.number() })),
+  byPriority: z.array(z.object({ priority: z.string(), count: z.number() })),
+  byQueue: z.array(z.object({ queue: z.string(), count: z.number() })),
+  sla: z.object({
+    closedTotal: z.number(),
+    closedOnTime: z.number(),
+    compliance: z.number().nullable(),
+    openTotal: z.number(),
+    openBreached: z.number(),
+  }),
+  resolution: z.object({
+    count: z.number(),
+    medianHours: z.number().nullable(),
+    p90Hours: z.number().nullable(),
+  }),
+  backlogAge: z.array(z.object({ bucket: z.string(), count: z.number() })),
+  volume: z.array(
+    z.object({ date: z.string(), created: z.number(), resolved: z.number() }),
+  ),
+});
+
+export type AnalyticsOverview = z.infer<typeof analyticsOverviewSchema>;
+
 export type TicketListFilters = {
   status?: TicketStatus | "All";
   q?: string;

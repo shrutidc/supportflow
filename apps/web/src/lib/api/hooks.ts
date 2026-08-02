@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query";
 import {
   claimTicket,
+  fetchAnalyticsOverview,
   fetchTicket,
   fetchTickets,
   patchTicket,
@@ -25,6 +26,16 @@ export function useTickets(filters: TicketListFilters) {
   return useQuery({
     queryKey: ticketKeys.list(filters),
     queryFn: () => fetchTickets(filters),
+  });
+}
+
+export function useAnalyticsOverview(days = 14) {
+  return useQuery({
+    queryKey: ["analytics", "overview", days] as const,
+    queryFn: () => fetchAnalyticsOverview(days),
+    // Aggregations over the whole workspace are the most expensive read in
+    // the app and the numbers move slowly; no need to refetch on every focus.
+    staleTime: 60_000,
   });
 }
 

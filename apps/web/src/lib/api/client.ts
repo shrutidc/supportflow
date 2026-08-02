@@ -1,6 +1,8 @@
 import {
+  analyticsOverviewSchema,
   ticketListResponseSchema,
   ticketSchema,
+  type AnalyticsOverview,
   type Ticket,
   type TicketListFilters,
   type TicketListItem,
@@ -48,6 +50,11 @@ export async function fetchTickets(filters: TicketListFilters): Promise<TicketLi
   const qs = params.toString();
   const data = await request<unknown>(`/api/tickets${qs ? `?${qs}` : ""}`);
   return ticketListResponseSchema.parse(data).tickets;
+}
+
+export async function fetchAnalyticsOverview(days = 14): Promise<AnalyticsOverview> {
+  const data = await request<unknown>(`/api/analytics/overview?days=${days}`);
+  return analyticsOverviewSchema.parse(data);
 }
 
 export async function fetchTicket(ticketId: string): Promise<Ticket> {

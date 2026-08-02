@@ -10,6 +10,7 @@ const errorHandler = require('./middleware/error-handler');
 const apiToken = require('./middleware/api-token');
 const { requireAuth } = require('./middleware/auth');
 const ticketsRouter = require('./routes/tickets.routes');
+const analyticsRouter = require('./routes/analytics.routes');
 
 /**
  * Builds the Express app without binding a port or touching the database,
@@ -70,6 +71,7 @@ function createApp({ authMiddleware } = {}) {
     }
 
     app.use('/api/tickets', ticketsRouter);
+    app.use('/api/analytics', analyticsRouter);
 
     // JSON 404 for unknown API routes.
     app.use('/api', (req, res) => {
