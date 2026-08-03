@@ -62,6 +62,16 @@ function loadEnv() {
     // rate limiting sees real client IPs from X-Forwarded-For.
     const trustProxy = process.env.TRUST_PROXY === 'true';
 
+    // The FastAPI AI service. Empty disables the AI endpoints, which return
+    // 503 rather than 500 — the ticket workspace keeps working without it.
+    // Deliberately not required at boot: the AI features are additive, and a
+    // deployment without them should still serve tickets.
+    const aiServiceUrl = (process.env.AI_SERVICE_URL || '').replace(/\/+$/, '');
+
+    // Shared secret for the AI service. Empty means the service is trusted
+    // without one, which is only acceptable when it is not publicly reachable.
+    const aiInternalToken = process.env.AI_INTERNAL_TOKEN || '';
+
     return {
         nodeEnv,
         isProduction: nodeEnv === 'production',
@@ -72,7 +82,9 @@ function loadEnv() {
         apiToken,
         clerkSecretKey,
         clerkPublishableKey,
-        trustProxy
+        trustProxy,
+        aiServiceUrl,
+        aiInternalToken
     };
 }
 
