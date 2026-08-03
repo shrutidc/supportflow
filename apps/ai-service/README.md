@@ -73,7 +73,7 @@ python3 -m venv .venv && ./.venv/bin/pip install -r requirements.txt
 | `AI_PROVIDER` | `mock` | `mock` or `gemini` |
 | `GEMINI_API_KEY` | — | Required only when `AI_PROVIDER=gemini` |
 | `GEMINI_MODEL` | `gemini-flash-latest` | See the note below |
-| `INTERNAL_TOKEN` | — | Shared secret with Express; empty disables the check |
+| `AI_INTERNAL_TOKEN` | — | Shared secret with Express; **empty accepts every request** |
 
 **Mock is the default on purpose.** Tests, CI, and the deployed demo all run
 with no API key, no network, and no cost. It is deterministic and lifts its

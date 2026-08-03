@@ -43,9 +43,12 @@ def load_settings() -> Settings:
         # records the *resolved* version from each response rather than this
         # name, keeping evaluation results attributable to a real model.
         gemini_model=os.getenv("GEMINI_MODEL", "gemini-flash-latest"),
-        # Shared secret between the Express API and this service. Empty means
-        # unauthenticated, which is only acceptable locally.
-        internal_token=os.getenv("INTERNAL_TOKEN", "").strip(),
+        # Shared secret between the Express API and this service. Named to
+        # match what Express sets, because they must agree: an earlier
+        # mismatch (INTERNAL_TOKEN here, AI_INTERNAL_TOKEN there) left the
+        # deployed service reading an unset variable, and "unset" means
+        # "open" — an unauthenticated public proxy to a paid model.
+        internal_token=os.getenv("AI_INTERNAL_TOKEN", "").strip(),
         request_timeout_seconds=float(os.getenv("REQUEST_TIMEOUT_SECONDS", "30")),
     )
 

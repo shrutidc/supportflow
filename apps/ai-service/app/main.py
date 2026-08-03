@@ -36,6 +36,17 @@ app = FastAPI(
     openapi_url=None,
 )
 
+# Said loudly at startup because the failure is otherwise invisible: with no
+# token every request is accepted, and a deployment reachable from the
+# internet becomes an open proxy to a paid model. That is fine locally and
+# never fine deployed, and the only signal used to be silence.
+if not settings.internal_token:
+    logger.warning(
+        '{"event":"no_internal_token","detail":"AI_INTERNAL_TOKEN is unset — '
+        'every request will be accepted. Acceptable locally; never for a '
+        'deployment reachable from the internet."}'
+    )
+
 
 async def require_internal_token(
     x_internal_token: str | None = Header(default=None),
