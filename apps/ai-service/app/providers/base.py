@@ -32,6 +32,22 @@ class ProviderError(RuntimeError):
     """
 
 
+class ProviderRateLimited(ProviderError):
+    """Quota is exhausted; the request would succeed later.
+
+    Kept distinct because it is the one provider failure that is neither the
+    caller's fault nor a broken service, and the only useful response is to
+    wait. Collapsing it into ProviderError told users the AI was down when it
+    was merely busy, which is a different instruction.
+    """
+
+    def __init__(self, retry_after_seconds: float | None = None) -> None:
+        self.retry_after_seconds = retry_after_seconds
+        super().__init__(
+            f"provider rate limited; retry after {retry_after_seconds or 'unknown'}s"
+        )
+
+
 class Provider(Protocol):
     name: str
 

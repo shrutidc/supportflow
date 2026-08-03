@@ -22,6 +22,7 @@ from .contracts import AnalyzeRequest, AnalyzeResponse
 from .features.summarize import summarize
 from .features.triage import triage
 from .providers import ProviderError
+from .providers.base import ProviderRateLimited
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger("ai-service")
@@ -87,6 +88,22 @@ async def request_context(request: Request, call_next):
         duration_ms,
     )
     return response
+
+
+@app.exception_handler(ProviderRateLimited)
+async def rate_limited_handler(request: Request, exc: ProviderRateLimited) -> JSONResponse:
+    # 429 rather than 502: the service is fine and the request was valid, the
+    # quota is simply spent. Reporting it as an outage tells the user to give
+    # up when the correct instruction is to wait.
+    logger.warning('{"event":"provider_rate_limited","retryAfter":%s}', exc.retry_after_seconds)
+    headers = {}
+    if exc.retry_after_seconds:
+        headers["Retry-After"] = str(int(exc.retry_after_seconds))
+    return JSONResponse(
+        status_code=429,
+        content={"error": "AI provider rate limit reached", "retry_after_seconds": exc.retry_after_seconds},
+        headers=headers,
+    )
 
 
 @app.exception_handler(ProviderError)

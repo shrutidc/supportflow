@@ -8,7 +8,8 @@
         "dev": "nodemon server.js",
         "seed": "node seed.js",
         "test": "node --test \"tests/**/*.test.js\"",
-        "seed:dataset": "node scripts/import-dataset.js"
+        "seed:dataset": "node scripts/import-dataset.js",
+        "prewarm:ai": "node scripts/prewarm-ai.js"
     },
     "keywords": [
         "ai",

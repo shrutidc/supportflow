@@ -15,17 +15,42 @@ from typing import Any
 import httpx
 
 from ..contracts import Usage
-from .base import ProviderError, StructuredResult
+from .base import ProviderError, ProviderRateLimited, StructuredResult
 
 logger = logging.getLogger("ai-service.gemini")
 
 _BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 
-# 429 is quota pressure, 503 is the free tier being busy; both are routine and
-# both clear on their own. 400 and 401 never will, so they are not retried.
-_RETRYABLE_STATUS = {429, 503, 500}
+# 503 and 500 are the free tier being momentarily busy: short, and they clear
+# on their own. 429 is deliberately NOT here — see _retry_delay_seconds.
+# 400 and 401 never clear, so they are not retried either.
+_RETRYABLE_STATUS = {503, 500}
 _MAX_ATTEMPTS = 3
 _BACKOFF_SECONDS = (1.0, 3.0)
+
+# A 429 whose quota resets within this window is worth waiting out inside the
+# request. Beyond it the agent should be told to come back, not held on an
+# open connection.
+_MAX_INLINE_WAIT_SECONDS = 5.0
+
+
+def _retry_delay_seconds(body: dict[str, Any]) -> float | None:
+    """
+    Pulls Google's own `retryDelay` out of a 429 body.
+
+    Worth parsing because the value is typically ~30s — a per-minute quota, not
+    a momentary blip. Retrying that on a 1s/3s backoff, as this once did, fails
+    just as surely while spending three more requests against the same
+    exhausted quota and reporting the result as an outage.
+    """
+    for detail in body.get("error", {}).get("details", []):
+        raw = detail.get("retryDelay")
+        if isinstance(raw, str) and raw.endswith("s"):
+            try:
+                return float(raw[:-1])
+            except ValueError:
+                continue
+    return None
 
 
 # Keywords Gemini's responseSchema understands. Everything else Pydantic
@@ -126,6 +151,17 @@ class GeminiProvider:
                     return response
 
                 last_status = response.status_code
+
+                if response.status_code == 429:
+                    delay = _retry_delay_seconds(response.json()) if response.content else None
+                    if delay is not None and delay <= _MAX_INLINE_WAIT_SECONDS:
+                        logger.warning('{"event":"gemini_quota_wait","seconds":%.1f}', delay)
+                        await asyncio.sleep(delay)
+                        continue
+                    # Typically ~30s. Holding the connection open that long is
+                    # worse than telling the caller to come back.
+                    raise ProviderRateLimited(retry_after_seconds=delay)
+
                 if response.status_code not in _RETRYABLE_STATUS:
                     break
 

@@ -61,8 +61,22 @@ async function analyze(feature, payload, requestId) {
             // Truncated: the body can echo ticket content back.
             detail: detail.slice(0, 200)
         });
-        // Upstream faults stay 503 — the client should offer a retry, not
-        // treat it as a bad request it could fix.
+
+        // A spent quota is passed through as 429 rather than flattened into
+        // 503. "The AI is busy, try shortly" and "the AI is broken" call for
+        // different actions from the agent, and only one of them is true.
+        if (response.status === 429) {
+            const retryAfter = response.headers.get('retry-after');
+            throw new HttpError(
+                429,
+                retryAfter
+                    ? `AI is rate limited. Try again in about ${retryAfter} seconds.`
+                    : 'AI is rate limited. Try again in a moment.'
+            );
+        }
+
+        // Other upstream faults stay 503 — the client should offer a retry,
+        // not treat it as a bad request it could fix.
         throw new HttpError(503, 'AI service could not complete the request');
     }
 
