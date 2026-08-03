@@ -117,7 +117,15 @@ async def provider_error_handler(request: Request, exc: ProviderError) -> JSONRe
 
 @app.get("/healthz")
 async def healthz() -> dict[str, str]:
-    return {"status": "ok", "provider": settings.provider}
+    # Reports the configured model because "which model is this deployment
+    # actually running?" was otherwise only answerable by spending a request
+    # against a quota that may already be exhausted — the exact situation in
+    # which you most need to know.
+    return {
+        "status": "ok",
+        "provider": settings.provider,
+        "model": settings.gemini_model if settings.uses_real_model else "mock",
+    }
 
 
 @app.post(

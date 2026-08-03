@@ -5,7 +5,9 @@ class TestHealth:
     def test_reports_the_active_provider(self, client):
         response = client.get("/healthz")
         assert response.status_code == 200
-        assert response.json() == {"status": "ok", "provider": "mock"}
+        # The model is reported so a deployment can be identified without
+        # spending a request against a possibly-exhausted quota.
+        assert response.json() == {"status": "ok", "provider": "mock", "model": "mock"}
 
 
 class TestTriage:
