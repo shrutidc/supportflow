@@ -11,7 +11,15 @@ const logger = require('./logger');
  * look them up in.
  */
 
-/** Beyond this the agent has given up anyway; failing fast beats a hung request. */
+/**
+ * Beyond this the agent has given up anyway; failing fast beats a hung request.
+ *
+ * Must stay below `maxDuration` in vercel.json (60s). If the platform limit is
+ * the lower of the two it kills the function first, and the caller gets a
+ * generic platform error instead of the 503 this client raises deliberately —
+ * which is exactly what a 30s function limit produced. AI calls run ~10-22s
+ * including a cold start, so this leaves real margin on both sides.
+ */
 const TIMEOUT_MS = 45_000;
 
 async function analyze(feature, payload, requestId) {
