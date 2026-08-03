@@ -1,15 +1,16 @@
 # Deployment
 
-SupportFlow deploys as **two Vercel projects from one repository**, both on the
+SupportFlow deploys as **three Vercel projects from one repository**, all on the
 free Hobby tier. Total hosting cost: **$0**.
 
 | Project | Root Directory | Serves |
 | --- | --- | --- |
 | `supportflow-web` | `apps/web` | Next.js frontend (the public URL) |
 | `supportflow-api` | `server` | Express API as a serverless function |
+| `supportflow-ai` | `apps/ai-service` | FastAPI AI service (Python runtime) |
 
-Two projects rather than one because Vercel builds a single root directory per
-project, and the frontend and API have separate dependency manifests.
+Three projects rather than one because Vercel builds a single root directory
+per project, and each has its own dependency manifest.
 
 ## Why serverless, and what it required
 
@@ -66,7 +67,42 @@ Two things made this a thin adaptation rather than a rewrite:
    `Authorization` carries the Clerk session JWT, and putting the secret there
    instead rejects every request.
 
-## Step 3 — MongoDB Atlas
+## Step 3 — Deploy the AI service
+
+A third Vercel project from the same repo.
+
+1. New project, **Root Directory: `apps/ai-service`**, Framework Preset **Other**.
+2. Environment variables:
+
+   | Variable | Value |
+   | --- | --- |
+   | `AI_PROVIDER` | `gemini` |
+   | `GEMINI_API_KEY` | your free key from [aistudio.google.com](https://aistudio.google.com) |
+   | `AI_INTERNAL_TOKEN` | any long random string |
+
+   Leave `GEMINI_MODEL` unset unless you have a reason — the default alias is
+   the only thing with free-tier quota (see the AI service README).
+
+3. Verify: `https://<ai>.vercel.app/healthz` returns
+   `{"status":"ok","provider":"gemini"}`. If it says `mock`, `AI_PROVIDER`
+   did not take.
+
+4. Then add to the **API** project (`supportflow-api`) and redeploy it:
+
+   | Variable | Value |
+   | --- | --- |
+   | `AI_SERVICE_URL` | the Step 3 URL, no trailing slash |
+   | `AI_INTERNAL_TOKEN` | the same string as above |
+
+**If the Python runtime misbehaves**, the fallback is Hugging Face Spaces:
+free Docker hosting, sleeps only after 48h idle. `apps/ai-service` already has
+everything a Space needs. Point `AI_SERVICE_URL` at the Space instead.
+
+**Leaving `AI_SERVICE_URL` unset is a supported state** — the AI endpoints
+return 503 and the ticket workspace works normally. The AI panel reports it;
+nothing else notices.
+
+## Step 4 — MongoDB Atlas
 
 - **Network access:** allow `0.0.0.0/0`. Vercel functions have dynamic IPs, so
   there is no address range to allowlist. This makes the database credentials
@@ -74,7 +110,7 @@ Two things made this a thin adaptation rather than a rewrite:
 - **Database user:** scope it to `readWrite` on the `supportflow` database
   rather than `atlasAdmin`. The application never needs cluster administration.
 
-## Step 4 — Demo account
+## Step 5 — Demo account
 
 Recruiters will not sign up, so publish a login.
 
@@ -125,3 +161,6 @@ the behaviour on the live URL early rather than discovering it late.
 | Every `/api` route 401 despite signing in | `API_URL` wrong on the frontend, or `API_TOKEN` set on one project but not the other. |
 | 503 "Database is unavailable" | Atlas network access not open to `0.0.0.0/0`, or the password is not percent-encoded (`@` → `%40`). |
 | Function timeout | `maxDuration` is 30s in `server/vercel.json`; the Hobby tier caps lower. Usually an unreachable Atlas cluster rather than slow work. |
+| AI panel says "AI service is not configured" | `AI_SERVICE_URL` is unset on the API project. |
+| AI panel says "AI service could not complete the request" | The AI service returned an error. Check its `/healthz` reports `gemini`, and that `AI_INTERNAL_TOKEN` matches on both projects. |
+| AI requests take ~10s | Expected. Gemini Flash on the free tier; the result is cached, so viewing the same unchanged ticket again is instant. |
