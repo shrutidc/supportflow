@@ -11,6 +11,12 @@ server/.env
 # Raw datasets — large, and redistributing them is not ours to do.
 customer_support/
 
+# The held-out evaluation sample is ticket text carved out of that corpus, so
+# the same reasoning applies. Regenerate it by running
+# notebooks/02-triage-baseline.ipynb. The scores derived from it ARE committed
+# — those are our measurements, not the dataset.
+apps/ai-service/app/eval/data/*.jsonl
+
 # Jupyter writes these the moment a notebook is opened.
 .ipynb_checkpoints/
 **/.ipynb_checkpoints/
