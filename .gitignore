@@ -14,4 +14,10 @@ customer_support/
 # Jupyter writes these the moment a notebook is opened.
 .ipynb_checkpoints/
 **/.ipynb_checkpoints/
+
+# Python
 __pycache__/
+*.py[cod]
+.venv/
+**/.venv/
+.pytest_cache/
