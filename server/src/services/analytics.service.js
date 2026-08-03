@@ -44,10 +44,17 @@ function toBuckets(hours) {
     return counts;
 }
 
-/** Fills gaps so a quiet day plots as zero rather than vanishing from the line. */
+/**
+ * Fills gaps so a quiet day plots as zero rather than vanishing from the line.
+ *
+ * The series ends yesterday, not today. Today is always partial — a few hours
+ * in — and plotting it alongside complete days drew a cliff to zero at the
+ * right edge that reads as a collapse in volume rather than as a day still in
+ * progress. A partial bucket next to full ones is not a comparable measurement.
+ */
 function toDailySeries(created, resolved, days) {
     const byDay = new Map();
-    for (let i = days - 1; i >= 0; i--) {
+    for (let i = days; i >= 1; i--) {
         const date = new Date(Date.now() - i * 24 * 3600 * 1000).toISOString().slice(0, 10);
         byDay.set(date, { date, created: 0, resolved: 0 });
     }

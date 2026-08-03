@@ -36,7 +36,9 @@ function forOrg(organizationId) {
             // show. A rolling `now - days` cutoff lands mid-day, so tickets
             // from earlier that same day are aggregated and then silently
             // dropped by the service, which buckets by calendar date.
-            const since = new Date(now.getTime() - (days - 1) * 24 * 3600 * 1000);
+            // `days` rather than `days - 1` because the series ends yesterday:
+            // today is partial and is excluded (see toDailySeries).
+            const since = new Date(now.getTime() - days * 24 * 3600 * 1000);
             since.setUTCHours(0, 0, 0, 0);
 
             const [result] = await Ticket.aggregate([

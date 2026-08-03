@@ -1,35 +1,36 @@
 {
-  "name": "supportflow-ai",
-  "version": "2.0.0",
-  "description": "SupportFlow AI — An AI Operations Co-worker for Modern Customer Support Teams",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
-    "seed": "node seed.js",
-    "test": "node --test \"tests/**/*.test.js\""
-  },
-  "keywords": [
-    "ai",
-    "support",
-    "customer-operations"
-  ],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "dependencies": {
-    "@clerk/express": "^2.1.46",
-    "cors": "^2.8.6",
-    "dotenv": "^17.3.1",
-    "express": "^5.2.1",
-    "express-rate-limit": "^8.5.2",
-    "helmet": "^8.3.0",
-    "mongoose": "^9.2.3",
-    "zod": "^4.4.3"
-  },
-  "devDependencies": {
-    "mongodb-memory-server": "^11.0.1",
-    "nodemon": "^3.1.14",
-    "supertest": "^7.2.2"
-  }
+    "name": "supportflow-ai",
+    "version": "2.0.0",
+    "description": "SupportFlow AI — An AI Operations Co-worker for Modern Customer Support Teams",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js",
+        "dev": "nodemon server.js",
+        "seed": "node seed.js",
+        "test": "node --test \"tests/**/*.test.js\"",
+        "seed:dataset": "node scripts/import-dataset.js"
+    },
+    "keywords": [
+        "ai",
+        "support",
+        "customer-operations"
+    ],
+    "author": "",
+    "license": "ISC",
+    "type": "commonjs",
+    "dependencies": {
+        "@clerk/express": "^2.1.46",
+        "cors": "^2.8.6",
+        "dotenv": "^17.3.1",
+        "express": "^5.2.1",
+        "express-rate-limit": "^8.5.2",
+        "helmet": "^8.3.0",
+        "mongoose": "^9.2.3",
+        "zod": "^4.4.3"
+    },
+    "devDependencies": {
+        "mongodb-memory-server": "^11.0.1",
+        "nodemon": "^3.1.14",
+        "supertest": "^7.2.2"
+    }
 }

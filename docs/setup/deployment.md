@@ -92,6 +92,21 @@ Recruiters will not sign up, so publish a login.
 
 4. Put the URL and credentials at the top of the README.
 
+### Refresh the demo data before showing it
+
+The importer spreads ticket arrivals across the 14 days *ending when it runs*,
+so the workspace ages: the recent end of the volume chart empties out, and the
+share of open tickets past their SLA climbs toward 100% as deadlines pass.
+
+Re-running it re-anchors everything to now, and is idempotent — only `SF-2xxx`
+ids are replaced:
+
+```bash
+npm run seed:dataset --prefix server -- --org-id=org_xxx
+```
+
+Worth doing shortly before recording screenshots or sharing the link.
+
 ## Clerk development vs production instances
 
 The keys in use are `pk_test_` / `sk_test_`, a **development** instance. These
