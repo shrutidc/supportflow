@@ -299,6 +299,13 @@ function FeatureSection({
 
       {analyze.isPending ? (
         <div className="flex flex-col gap-2">
+          {/* The wait is 10-20s on a cold start, which is long enough that
+              skeleton bars alone read as a page that has stopped doing
+              anything. Saying so is the difference between "working" and
+              "broken" from the agent's side. */}
+          <p className="text-xs text-muted-foreground">
+            Asking the model — this usually takes 10–20 seconds.
+          </p>
           <Skeleton className="h-4 w-3/4" />
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-2/3" />
