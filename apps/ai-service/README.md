@@ -72,7 +72,7 @@ python3 -m venv .venv && ./.venv/bin/pip install -r requirements.txt
 | --- | --- | --- |
 | `AI_PROVIDER` | `mock` | `mock` or `gemini` |
 | `GEMINI_API_KEY` | — | Required only when `AI_PROVIDER=gemini` |
-| `GEMINI_MODEL` | `gemini-flash-latest` | See the note below |
+| `GEMINI_MODEL` | `gemini-flash-lite-latest` | See the note below |
 | `AI_INTERNAL_TOKEN` | — | Shared secret with Express; **empty accepts every request** |
 
 **Mock is the default on purpose.** Tests, CI, and the deployed demo all run
@@ -80,16 +80,34 @@ with no API key, no network, and no cost. It is deterministic and lifts its
 evidence quotes verbatim from the ticket, so the grounding checks pass honestly
 rather than being bypassed.
 
-### On the model name
+### On the model choice
 
-`gemini-flash-latest` is a floating alias. Every *pinned* model tested reports
-`limit: 0` on the free tier — there is no free quota to pin to. The alias moves
-as Google promotes new models, so the provider records the **resolved** version
-returned by each response (`gemini-3.6-flash` at the time of writing) rather
-than the alias, which keeps evaluation results attributable to a real model.
+**Lite, chosen by measurement.** `gemini-flash-latest` resolves to a premium
+model with a free allowance of **20 requests** — exhausted in an afternoon —
+answering in 10–15 seconds. `gemini-flash-lite-latest` resolves to
+`gemini-3.5-flash-lite`, returns the **same classification** on the same
+tickets in **~1.3 seconds**, and has quota left. Triage is short-form
+classification, which is what lite models are built for; the larger model was
+buying nothing.
 
-Free-tier 429s and 503s are routine; the provider retries them up to three
-times with short backoff. 400 and 401 are never retried — they will not clear.
+Still a floating alias rather than a pinned version, because every *pinned*
+model tested reports `limit: 0` — there is no free quota to pin to. The
+provider records the **resolved** version from each response, so results stay
+attributable as the alias moves.
+
+### On rate limits
+
+Free-tier quota is per model and easily exhausted. Two rules learned the hard
+way:
+
+- **A 429 is never retried on a short backoff.** Google's `retryDelay` is
+  typically ~30s, so a 1s/3s backoff fails every attempt *and spends three more
+  requests against the exhausted quota*. It is parsed and honoured instead.
+- **A rate limit is not an outage.** It surfaces as 429 with `Retry-After`, so
+  the caller is told to wait rather than that the service is broken.
+
+503 and 500 are momentary and still retried. 400 and 401 never are — they will
+not clear.
 
 ## Endpoints
 

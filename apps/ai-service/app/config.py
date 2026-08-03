@@ -37,12 +37,19 @@ def load_settings() -> Settings:
     return Settings(
         provider=provider,
         gemini_api_key=gemini_api_key,
-        # A floating alias, not a pinned version, because every pinned model
-        # tested reports `limit: 0` on the free tier — there is no free quota
-        # to pin to. The alias drifts as Google moves it, so the provider
-        # records the *resolved* version from each response rather than this
-        # name, keeping evaluation results attributable to a real model.
-        gemini_model=os.getenv("GEMINI_MODEL", "gemini-flash-latest"),
+        # Lite, and measured rather than assumed. `gemini-flash-latest`
+        # resolves to a premium model whose free allowance is 20 requests —
+        # exhausted in an afternoon — and which answers in 10-15 seconds.
+        # Lite resolves to gemini-3.5-flash-lite, returns the same
+        # classification on the same tickets in ~1.3 seconds, and has quota
+        # left. Triage is short-form classification, which is what lite models
+        # are for; the larger model was buying nothing here.
+        #
+        # Still a floating alias rather than a pinned version, because every
+        # pinned model tested reports `limit: 0` — there is no free quota to
+        # pin to. The provider records the *resolved* version from each
+        # response, so results stay attributable as the alias moves.
+        gemini_model=os.getenv("GEMINI_MODEL", "gemini-flash-lite-latest"),
         # Shared secret between the Express API and this service. Named to
         # match what Express sets, because they must agree: an earlier
         # mismatch (INTERNAL_TOKEN here, AI_INTERNAL_TOKEN there) left the
