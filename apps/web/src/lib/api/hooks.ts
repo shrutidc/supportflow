@@ -6,14 +6,18 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import {
+  analyzeTicket,
   claimTicket,
+  fetchAiDecisions,
   fetchAnalyticsOverview,
   fetchTicket,
   fetchTickets,
   patchTicket,
   postMessage,
+  sendAiFeedback,
   type TicketPatch,
 } from "./client";
+import type { AiFeature } from "./schemas";
 import type { Ticket, TicketListFilters } from "./schemas";
 
 export const ticketKeys = {
@@ -26,6 +30,51 @@ export function useTickets(filters: TicketListFilters) {
   return useQuery({
     queryKey: ticketKeys.list(filters),
     queryFn: () => fetchTickets(filters),
+  });
+}
+
+export const aiKeys = {
+  decisions: (ticketId: string) => ["ai", "decisions", ticketId] as const,
+};
+
+/** Past recommendations for a ticket. Read-only; nothing here spends money. */
+export function useAiDecisions(ticketId: string) {
+  return useQuery({
+    queryKey: aiKeys.decisions(ticketId),
+    queryFn: () => fetchAiDecisions(ticketId),
+  });
+}
+
+/**
+ * Requests an analysis. Deliberately a mutation rather than a query: it may
+ * call a paid model and creates a decision record, so it must never fire from
+ * a component render, a refocus, or a retry.
+ */
+export function useAnalyzeTicket(ticketId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ feature, force }: { feature: AiFeature; force?: boolean }) =>
+      analyzeTicket(ticketId, feature, force),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: aiKeys.decisions(ticketId) });
+    },
+    retry: false,
+  });
+}
+
+export function useAiFeedback(ticketId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      decisionId,
+      userAction,
+    }: {
+      decisionId: string;
+      userAction: "accepted" | "edited" | "rejected";
+    }) => sendAiFeedback(decisionId, userAction),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: aiKeys.decisions(ticketId) });
+    },
   });
 }
 

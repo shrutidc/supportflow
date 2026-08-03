@@ -1,7 +1,11 @@
 import {
+  aiDecisionListSchema,
+  aiDecisionSchema,
   analyticsOverviewSchema,
   ticketListResponseSchema,
   ticketSchema,
+  type AiDecision,
+  type AiFeature,
   type AnalyticsOverview,
   type Ticket,
   type TicketListFilters,
@@ -50,6 +54,43 @@ export async function fetchTickets(filters: TicketListFilters): Promise<TicketLi
   const qs = params.toString();
   const data = await request<unknown>(`/api/tickets${qs ? `?${qs}` : ""}`);
   return ticketListResponseSchema.parse(data).tickets;
+}
+
+/**
+ * Ask for an analysis. A POST because it creates a decision record and may
+ * spend money — the server reuses an existing answer when the ticket has not
+ * changed, so this is not necessarily a model call.
+ */
+export async function analyzeTicket(
+  ticketId: string,
+  feature: AiFeature,
+  force = false,
+): Promise<AiDecision> {
+  const data = await request<unknown>(
+    `/api/ai/tickets/${encodeURIComponent(ticketId)}/${feature}${force ? "?force=true" : ""}`,
+    { method: "POST" },
+  );
+  return aiDecisionSchema.parse(data);
+}
+
+export async function fetchAiDecisions(ticketId: string): Promise<AiDecision[]> {
+  const data = await request<unknown>(
+    `/api/ai/tickets/${encodeURIComponent(ticketId)}/decisions`,
+  );
+  return aiDecisionListSchema.parse(data).decisions;
+}
+
+/** Records what the agent did with a recommendation. Reporting only — this
+ *  never feeds automatic retraining. */
+export async function sendAiFeedback(
+  decisionId: string,
+  userAction: "accepted" | "edited" | "rejected",
+): Promise<AiDecision> {
+  const data = await request<unknown>(
+    `/api/ai/decisions/${encodeURIComponent(decisionId)}/feedback`,
+    { method: "POST", body: JSON.stringify({ userAction }) },
+  );
+  return aiDecisionSchema.parse(data);
 }
 
 export async function fetchAnalyticsOverview(days = 14): Promise<AnalyticsOverview> {

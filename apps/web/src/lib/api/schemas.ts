@@ -65,6 +65,65 @@ export type Message = z.infer<typeof messageSchema>;
 
 export type TicketView = "all" | "assigned" | "escalations";
 
+/** A quote tied to the message it came from, already verified server-side. */
+export const aiEvidenceSchema = z.object({
+  messageId: z.string(),
+  quote: z.string(),
+  reason: z.string().nullish(),
+});
+
+export const aiSummaryOutputSchema = z.object({
+  headline: z.string(),
+  // Facts are what the ticket states; inference is the model's reading. The
+  // UI keeps them visually apart for the same reason the contract does.
+  extracted_facts: z
+    .array(z.object({ statement: z.string(), evidence: z.array(aiEvidenceSchema).default([]) }))
+    .default([]),
+  inference: z.array(z.string()).default([]),
+  actions_attempted: z.array(z.string()).default([]),
+  customer_goal: z.string().default(""),
+  current_blocker: z.string().nullish(),
+  missing_information: z.array(z.string()).default([]),
+  suggested_next_action: z.string().default(""),
+});
+
+export const aiTriageOutputSchema = z.object({
+  category: z.string(),
+  priority: z.string(),
+  urgency: z.string(),
+  recommended_queue: z.string(),
+  should_escalate: z.boolean(),
+  confidence: z.number(),
+  reasoning_summary: z.string(),
+  evidence: z.array(aiEvidenceSchema).default([]),
+  missing_information: z.array(z.string()).default([]),
+});
+
+export const aiDecisionSchema = z.object({
+  id: z.string(),
+  ticketId: z.string(),
+  feature: z.enum(["summarize", "triage"]),
+  model: z.string(),
+  promptVersion: z.string(),
+  output: z.unknown(),
+  confidence: z.number(),
+  evidence: z.array(aiEvidenceSchema).default([]),
+  latencyMs: z.number(),
+  tokenUsage: z.object({ input: z.number(), output: z.number() }),
+  groundingDropped: z.number(),
+  // null means nobody has judged it yet — not the same as rejected.
+  userAction: z.enum(["accepted", "edited", "rejected"]).nullable(),
+  createdAt: z.string(),
+});
+
+export const aiDecisionListSchema = z.object({ decisions: z.array(aiDecisionSchema) });
+
+export type AiEvidence = z.infer<typeof aiEvidenceSchema>;
+export type AiDecision = z.infer<typeof aiDecisionSchema>;
+export type AiSummaryOutput = z.infer<typeof aiSummaryOutputSchema>;
+export type AiTriageOutput = z.infer<typeof aiTriageOutputSchema>;
+export type AiFeature = "summarize" | "triage";
+
 /**
  * Operational metrics. Every rate is nullable: a workspace with nothing closed
  * yet has no compliance rate, and rendering 0% there would read as total

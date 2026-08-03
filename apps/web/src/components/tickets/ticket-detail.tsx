@@ -22,6 +22,7 @@ import { useClaimTicket, useSendMessage, useTicket, useUpdateTicket } from "@/li
 import { TICKET_STATUSES, type Message, type Ticket, type TicketStatus } from "@/lib/api/schemas";
 import { formatLongDate, formatSlaCountdown } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { AiPanel } from "./ai-panel";
 
 export function TicketDetail({ ticketId }: { ticketId: string }) {
   const { data: ticket, isPending, isError, error, refetch } = useTicket(ticketId);
@@ -128,6 +129,8 @@ function TicketDetailLoaded({ ticket }: { ticket: Ticket }) {
               <SlaRow deadline={ticket.slaDeadline} closed={ticket.status === "Closed"} />
             </CardContent>
           </Card>
+
+          <AiPanel ticket={ticket} />
         </div>
       </div>
     </div>
