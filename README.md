@@ -1,25 +1,20 @@
 # SupportFlow
 
-**A multi-tenant customer support platform** — ticket triage, ownership, and
-escalation for a B2B SaaS support team, built as a production-shaped
-application rather than a CRUD demo.
+A multi-tenant customer support platform: ticket triage, ownership, and
+escalation for a B2B SaaS support team, with AI-assisted triage that is
+measured rather than assumed.
 
-### ▶ [Try the live demo](https://supportflow-lake.vercel.app)
+**Live demo → https://supportflow-lake.vercel.app**
 
-Sign in with **`demo+clerk_test@example.com`** / **`SupportFlowDemo2026!`** —
-a throwaway account on a seeded workspace of 400 tickets.
+Sign in with `demo+clerk_test@example.com` / `SupportFlowDemo2026!` — a
+throwaway account on a seeded workspace of 400 tickets.
 
-**Worth a look, in order:**
+The AI panel is inside individual tickets, not the inbox, so open a ticket to
+see it. The [dashboard](https://supportflow-lake.vercel.app/dashboard) has SLA
+compliance, resolution percentiles, and backlog age.
 
-1. **[Inbox](https://supportflow-lake.vercel.app/inbox)** — filter by status,
-   claim an unassigned ticket
-2. **Open any ticket** — the right panel carries the AI triage and summary,
-   with the quotes behind each suggestion. Nothing is applied until you click.
-3. **[Dashboard](https://supportflow-lake.vercel.app/dashboard)** — SLA
-   compliance, resolution percentiles, backlog age
-
-Clerk's card shows a "Development mode" badge: the instance is deliberately a
-development one, since a production instance needs a custom domain.
+Clerk runs as a development instance, so its sign-in card shows a "Development
+mode" badge — a production instance needs a custom domain.
 
 ---
 
@@ -32,15 +27,12 @@ escalate into an engineering queue with a tightened SLA.
 
 Every record belongs to an **organization**. A signed-in agent can only ever
 see their own workspace's data, and that guarantee is enforced structurally —
-see [Tenant isolation](#tenant-isolation-the-part-worth-reading) below.
+see [Tenant isolation](#tenant-isolation) below.
 
 AI suggests a category, priority, and queue for each ticket, with the quotes
-behind the suggestion. It never applies anything on its own. Whether that
-suggestion is any good is the next section.
+behind the suggestion. It never applies anything on its own.
 
-## Does the AI actually work?
-
-**Measured, not assumed — and it lost.**
+## Evaluation
 
 Zero-shot Gemini triage against TF-IDF + logistic regression, both scored on
 the same 60 held-out tickets with human labels:
@@ -55,7 +47,7 @@ Every gap exceeds its 95% interval, so these are real differences rather than
 noise. **On priority the LLM scores below the majority-class floor** — always
 answering "medium" beats it by twelve points.
 
-### Calibration is the sharper finding
+### Calibration
 
 | Stated confidence | Predictions | Mean stated | **Actually right** |
 | --- | --- | --- | --- |
@@ -68,7 +60,7 @@ checking the design depends on. The grounding step verifies that quoted
 evidence really appears in the ticket — it says nothing about whether the
 *classification* is right, and this is where that limit shows.
 
-### What follows from it
+### Interpretation
 
 Not "LLMs cannot triage." Against ~19,000 labelled in-domain examples,
 zero-shot prompting loses to a classifier that trains in seconds, answers in
@@ -78,8 +70,7 @@ conventions get learned.
 
 The model earns its place elsewhere — summarising a thread, extracting
 evidence with citations, handling a category with no training examples yet.
-Triage classification is not that, and shipping it as though it were would
-have meant shipping a feature that is worse than a constant.
+Triage classification is not one of them.
 
 **Limitations.** n=60 and zero-shot only, so intervals are ±12 points.
 Few-shot is implemented in the harness but unrun — Gemini's free-tier daily
@@ -127,9 +118,9 @@ flowchart LR
 The browser never holds an API token and never calls the API directly. The
 Next.js route handler mints a short-lived Clerk token per request, server-side.
 
-The dotted path is deliberate: the AI service receives ticket **content** and
-returns JSON. It has no database credentials and never sees a ticket id, so it
-cannot write anything back — the arrow only goes one way for a reason.
+The dotted path is one-way: the AI service receives ticket content and returns
+JSON. It holds no database credentials and never sees a ticket id, so it cannot
+write anything back.
 
 **Why not a `next.config` rewrite?** A rewrite forwards browser cookies, which
 works when both services share `localhost` and silently fails in production
@@ -148,7 +139,7 @@ behaves identically in both.
 | Database | MongoDB Atlas |
 | Tooling | Docker Compose, GitHub Actions, Vitest, node:test + Supertest, pytest |
 
-## Tenant isolation, the part worth reading
+## Tenant isolation
 
 Three independent layers, so a single mistake is not a data breach:
 
@@ -166,7 +157,7 @@ organization filter from the repository makes 8 of the 10 isolation tests fail.
 A suite that still passes against deliberately broken code is worse than no
 suite, so this check is part of the definition of done.
 
-## Other things a reviewer might look for
+## Implementation notes
 
 - **Atomic claim.** Taking ownership is one conditional `findOneAndUpdate`, not
   read-then-write, so two agents cannot both believe they claimed a ticket.
