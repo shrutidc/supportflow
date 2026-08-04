@@ -26,6 +26,9 @@ from . import metrics
 
 DATA_DIR = Path(__file__).parent / "data"
 HELDOUT = DATA_DIR / "heldout.jsonl"
+# Worked examples for the few-shot variant. Drawn from TRAINING rows only —
+# taking them from the scored set would be handing the model its answers.
+FEWSHOT = DATA_DIR / "fewshot_examples.jsonl"
 # Scored on the same rows this runner scores. NOT baseline_scores.json, which
 # covers the full 6,530-row test set: comparing that against a 60-row LLM run
 # is comparing two different populations. The first version of this file did
@@ -40,7 +43,7 @@ RESULTS = DATA_DIR / "llm_scores.json"
 # harness, not the model.
 PRIORITIES = ["low", "medium", "high"]
 
-SECONDS_BETWEEN_CALLS = 4.0
+SECONDS_BETWEEN_CALLS = 8.0
 RATE_LIMIT_BACKOFF = 35.0
 
 
@@ -55,7 +58,18 @@ def load_heldout(limit: int | None) -> list[dict]:
     return rows[:limit] if limit else rows
 
 
-def build_request(row: dict, categories: list[str], queues: list[str]) -> AnalyzeRequest:
+def load_examples(shots: int) -> list[dict]:
+    if shots <= 0:
+        return []
+    if not FEWSHOT.exists():
+        raise SystemExit(f"{FEWSHOT} not found — regenerate the evaluation data first")
+    rows = [json.loads(line) for line in FEWSHOT.read_text().splitlines() if line.strip()]
+    return rows[:shots]
+
+
+def build_request(
+    row: dict, categories: list[str], queues: list[str], examples: list[dict]
+) -> AnalyzeRequest:
     return AnalyzeRequest.model_validate(
         {
             "ticket": {
@@ -69,12 +83,24 @@ def build_request(row: dict, categories: list[str], queues: list[str]) -> Analyz
                 "priorities": PRIORITIES,
             },
             "org_tag": "eval",
+            "examples": examples,
         }
     )
 
 
-async def run(limit: int | None) -> dict:
+async def run(limit: int | None, shots: int) -> dict:
     rows = load_heldout(limit)
+    examples = load_examples(shots)
+
+    # An example that also appears in the scored rows would be leakage,
+    # and the failure is silent — it simply flatters the few-shot result.
+    scored_subjects = {r["subject"].strip().lower() for r in rows}
+    leaked = [e for e in examples if e["subject"].strip().lower() in scored_subjects]
+    if leaked:
+        raise SystemExit(
+            f"{len(leaked)} few-shot example(s) appear in the scored rows — "
+            "regenerate the evaluation data"
+        )
 
     # Taken from the held-out set itself so the model can reach every label it
     # will be scored on.
@@ -89,11 +115,12 @@ async def run(limit: int | None) -> dict:
     tokens_in = tokens_out = 0
     failures = 0
 
-    print(f"scoring {len(rows)} tickets · {len(categories)} types · {len(queues)} queues")
+    variant = f"{shots}-shot" if shots else "zero-shot"
+    print(f"scoring {len(rows)} tickets · {variant} · {len(categories)} types · {len(queues)} queues")
 
     for index, row in enumerate(rows, start=1):
         try:
-            response = await triage(build_request(row, categories, queues))
+            response = await triage(build_request(row, categories, queues, examples))
         except ProviderRateLimited:
             # Pacing was still too fast. Back off and retry this row rather
             # than recording a rate limit as a wrong answer — that would score
@@ -101,7 +128,7 @@ async def run(limit: int | None) -> dict:
             print(f"  [{index}] rate limited, backing off {RATE_LIMIT_BACKOFF:.0f}s")
             await asyncio.sleep(RATE_LIMIT_BACKOFF)
             try:
-                response = await triage(build_request(row, categories, queues))
+                response = await triage(build_request(row, categories, queues, examples))
             except ProviderError:
                 failures += 1
                 continue
@@ -139,6 +166,8 @@ async def run(limit: int | None) -> dict:
 
     total = len(latencies)
     return {
+        "variant": f"{shots}-shot" if shots else "zero-shot",
+        "shots": shots,
         "model": response.model if total else None,
         "prompt_version": response.prompt_version if total else None,
         "n_scored": total,
@@ -201,11 +230,14 @@ def check_same_rows(results: dict, baseline: dict) -> list[str]:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--limit", type=int, default=60)
+    parser.add_argument("--limit", type=int, default=150)
+    parser.add_argument("--shots", type=int, default=0,
+                        help="worked examples in the prompt; 0 is zero-shot")
+    parser.add_argument("--out", default=None, help="results filename")
     args = parser.parse_args()
 
     started = time.time()
-    results = asyncio.run(run(args.limit))
+    results = asyncio.run(run(args.limit, args.shots))
     results["wall_seconds"] = round(time.time() - started, 1)
 
     for target, result in results["targets"].items():
@@ -223,9 +255,10 @@ def main() -> None:
     ]
 
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    RESULTS.write_text(json.dumps(results, indent=2))
+    destination = DATA_DIR / (args.out or RESULTS.name)
+    destination.write_text(json.dumps(results, indent=2))
 
-    print(f"\nscored {results['n_scored']}, failed {results['n_failed']}")
+    print(f"\n{results['variant']}: scored {results['n_scored']}, failed {results['n_failed']}")
     for target, result in results["targets"].items():
         base = baseline.get(target, {})
         margin = wald_margin(result["accuracy"], result["n"]) * 100
@@ -243,7 +276,7 @@ def main() -> None:
     for warning in results["comparison_warnings"]:
         print(f"\n  WARNING  {warning}")
 
-    print(f"\nwrote {RESULTS}")
+    print(f"\nwrote {destination}")
 
 
 if __name__ == "__main__":

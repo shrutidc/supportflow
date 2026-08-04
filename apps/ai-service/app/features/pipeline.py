@@ -28,7 +28,7 @@ from ..contracts import (
 from ..grounding import adjust_confidence, verify_evidence
 from ..providers import ProviderError, get_provider
 from ..redact import redact
-from .prompts import render_ticket, system_prompt
+from .prompts import render_examples, render_ticket, system_prompt
 
 TOutput = TypeVar("TOutput", bound=BaseModel)
 
@@ -92,7 +92,9 @@ async def run_feature(
     provider = get_provider()
 
     ticket = _redact_ticket(request.ticket, request.redaction)
-    prompt = render_ticket(ticket, request.taxonomy)
+    # Examples first, then the ticket, so the delimited ticket stays the last
+    # thing the model reads before answering.
+    prompt = render_examples(request.examples) + render_ticket(ticket, request.taxonomy)
 
     started = time.perf_counter()
     result = await provider.generate_structured(

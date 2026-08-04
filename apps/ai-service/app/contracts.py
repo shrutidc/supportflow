@@ -46,6 +46,16 @@ class TicketContext(BaseModel):
     customer_company: str | None = None
 
 
+class LabelledExample(BaseModel):
+    """A previously-classified ticket, shown to the model as a worked example."""
+
+    subject: str
+    body: str
+    category: str
+    queue: str
+    priority: str
+
+
 class AnalyzeRequest(BaseModel):
     ticket: TicketContext
     taxonomy: Taxonomy
@@ -53,6 +63,12 @@ class AnalyzeRequest(BaseModel):
     # model provider.
     org_tag: str = ""
     redaction: RedactionMode = "standard"
+    # Optional worked examples. Empty means zero-shot, which is what the
+    # product sends today; the evaluation uses this to measure what a handful
+    # of labelled examples is worth against a supervised baseline that has
+    # thousands. Examples must come from training data — drawing them from the
+    # rows being scored would be leakage dressed up as prompting.
+    examples: list[LabelledExample] = Field(default_factory=list)
 
 
 class Evidence(BaseModel):
