@@ -26,7 +26,12 @@ from . import metrics
 
 DATA_DIR = Path(__file__).parent / "data"
 HELDOUT = DATA_DIR / "heldout.jsonl"
-BASELINE = DATA_DIR / "baseline_scores.json"
+# Scored on the same rows this runner scores. NOT baseline_scores.json, which
+# covers the full 6,530-row test set: comparing that against a 60-row LLM run
+# is comparing two different populations. The first version of this file did
+# exactly that, and the giveaway was the majority-class rate differing by nine
+# points between the two — a number that should be identical if the rows are.
+BASELINE = DATA_DIR / "baseline_on_scored_rows.json"
 RESULTS = DATA_DIR / "llm_scores.json"
 
 # The application's vocabulary. The dataset's `type` and `queue` values are the
@@ -153,6 +158,47 @@ async def run(limit: int | None) -> dict:
     }
 
 
+def wald_margin(accuracy: float, n: int) -> float:
+    """95% margin of error. A 60-row run is not a precise measurement, and
+    printing a bare percentage invites reading it as one."""
+    if n <= 0:
+        return 0.0
+    return 1.96 * (accuracy * (1 - accuracy) / n) ** 0.5
+
+
+def check_same_rows(results: dict, baseline: dict) -> list[str]:
+    """
+    The two scores must come from the same rows to be comparable.
+
+    Majority-class rate is the cheap invariant: it depends only on the labels
+    present, so identical rows give an identical value. A mismatch is proof the
+    populations differ — which is what exposed the original bug, where the
+    baseline covered 6,530 rows and the LLM 60.
+    """
+    # A tenth of a percentage point: loose enough to survive the two sides
+    # storing the same fraction at different precision (0.4833 vs 0.483333),
+    # tight enough that the mismatch this exists to catch — 39.2% against
+    # 48.3% — is nowhere near it. An exact comparison flagged identical rows
+    # as different, which is a guard nobody would keep.
+    tolerance = 1e-3
+
+    problems = []
+    for target, result in results["targets"].items():
+        base = baseline.get(target)
+        if not base:
+            problems.append(f"{target}: no baseline scored on these rows")
+            continue
+        if abs(base["majority_class"] - result["majority_class"]) > tolerance:
+            problems.append(
+                f"{target}: majority-class differs "
+                f"(baseline {base['majority_class']:.1%} vs run {result['majority_class']:.1%}) "
+                "— the two were not scored on the same rows"
+            )
+        elif base.get("n") not in (None, result["n"]):
+            problems.append(f"{target}: baseline n={base['n']} but run n={result['n']}")
+    return problems
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--limit", type=int, default=60)
@@ -162,20 +208,41 @@ def main() -> None:
     results = asyncio.run(run(args.limit))
     results["wall_seconds"] = round(time.time() - started, 1)
 
-    if BASELINE.exists():
-        results["baseline"] = json.loads(BASELINE.read_text())
+    for target, result in results["targets"].items():
+        margin = wald_margin(result["accuracy"], result["n"])
+        result["accuracy_ci95"] = [
+            round(max(0.0, result["accuracy"] - margin), 4),
+            round(min(1.0, result["accuracy"] + margin), 4),
+        ]
+
+    baseline = json.loads(BASELINE.read_text()) if BASELINE.exists() else {}
+    results["baseline"] = baseline
+    results["comparison_warnings"] = check_same_rows(results, baseline) if baseline else [
+        f"{BASELINE.name} not found — run notebooks/02-triage-baseline.ipynb, "
+        "then score the baseline on these rows before comparing"
+    ]
 
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     RESULTS.write_text(json.dumps(results, indent=2))
 
     print(f"\nscored {results['n_scored']}, failed {results['n_failed']}")
     for target, result in results["targets"].items():
-        base = results.get("baseline", {}).get(target, {})
+        base = baseline.get(target, {})
+        margin = wald_margin(result["accuracy"], result["n"]) * 100
+        gap = (result["accuracy"] - base.get("accuracy", 0)) * 100 if base else 0.0
+        # Flagged rather than reported as a result: a gap inside the interval
+        # is not a finding, and a table of bare percentages hides that.
+        verdict = "within noise" if base and abs(gap) < margin else ""
         print(
-            f"  {target:9s} llm {result['accuracy']:.1%}"
-            f"  baseline {base.get('accuracy', 0):.1%}"
-            f"  majority {result['majority_class']:.1%}"
+            f"  {target:9s} llm {result['accuracy']:5.1%} (+/-{margin:.1f})"
+            f"  baseline {base.get('accuracy', 0):5.1%}"
+            f"  majority {result['majority_class']:5.1%}"
+            f"  gap {gap:+5.1f} pts {verdict}"
         )
+
+    for warning in results["comparison_warnings"]:
+        print(f"\n  WARNING  {warning}")
+
     print(f"\nwrote {RESULTS}")
 
 

@@ -1,0 +1,395 @@
+{
+  "model": "gemini-3.5-flash-lite",
+  "prompt_version": "triage/v1",
+  "n_scored": 60,
+  "n_failed": 0,
+  "targets": {
+    "type": {
+      "target": "type",
+      "n": 60,
+      "accuracy": 0.7,
+      "macro_f1": 0.4625,
+      "per_class": [
+        {
+          "label": "Change",
+          "support": 4,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        {
+          "label": "Incident",
+          "support": 29,
+          "precision": 0.7222,
+          "recall": 0.8966,
+          "f1": 0.8
+        },
+        {
+          "label": "Problem",
+          "support": 13,
+          "precision": 0.6667,
+          "recall": 0.1538,
+          "f1": 0.25
+        },
+        {
+          "label": "Request",
+          "support": 14,
+          "precision": 0.6667,
+          "recall": 1.0,
+          "f1": 0.8
+        }
+      ],
+      "confusion": {
+        "Change": {
+          "Change": 0,
+          "Incident": 0,
+          "Problem": 0,
+          "Request": 4
+        },
+        "Incident": {
+          "Change": 0,
+          "Incident": 26,
+          "Problem": 1,
+          "Request": 2
+        },
+        "Problem": {
+          "Change": 0,
+          "Incident": 10,
+          "Problem": 2,
+          "Request": 1
+        },
+        "Request": {
+          "Change": 0,
+          "Incident": 0,
+          "Problem": 0,
+          "Request": 14
+        }
+      },
+      "majority_class": 0.4833,
+      "accuracy_ci95": [
+        0.584,
+        0.816
+      ]
+    },
+    "queue": {
+      "target": "queue",
+      "n": 60,
+      "accuracy": 0.4,
+      "macro_f1": 0.2857,
+      "per_class": [
+        {
+          "label": "Billing and Payments",
+          "support": 5,
+          "precision": 1.0,
+          "recall": 0.4,
+          "f1": 0.5714
+        },
+        {
+          "label": "Customer Service",
+          "support": 11,
+          "precision": 1.0,
+          "recall": 0.0909,
+          "f1": 0.1667
+        },
+        {
+          "label": "General Inquiry",
+          "support": 1,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        {
+          "label": "Human Resources",
+          "support": 3,
+          "precision": 1.0,
+          "recall": 0.6667,
+          "f1": 0.8
+        },
+        {
+          "label": "IT Support",
+          "support": 6,
+          "precision": 0.1667,
+          "recall": 0.1667,
+          "f1": 0.1667
+        },
+        {
+          "label": "Product Support",
+          "support": 9,
+          "precision": 0.2667,
+          "recall": 0.4444,
+          "f1": 0.3333
+        },
+        {
+          "label": "Returns and Exchanges",
+          "support": 5,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        {
+          "label": "Sales and Pre-Sales",
+          "support": 1,
+          "precision": 0.1111,
+          "recall": 1.0,
+          "f1": 0.2
+        },
+        {
+          "label": "Service Outages and Maintenance",
+          "support": 2,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        {
+          "label": "Technical Support",
+          "support": 17,
+          "precision": 0.52,
+          "recall": 0.7647,
+          "f1": 0.619
+        }
+      ],
+      "confusion": {
+        "Billing and Payments": {
+          "Billing and Payments": 2,
+          "Customer Service": 0,
+          "General Inquiry": 0,
+          "Human Resources": 0,
+          "IT Support": 3,
+          "Product Support": 0,
+          "Returns and Exchanges": 0,
+          "Sales and Pre-Sales": 0,
+          "Service Outages and Maintenance": 0,
+          "Technical Support": 0
+        },
+        "Customer Service": {
+          "Billing and Payments": 0,
+          "Customer Service": 1,
+          "General Inquiry": 0,
+          "Human Resources": 0,
+          "IT Support": 1,
+          "Product Support": 4,
+          "Returns and Exchanges": 0,
+          "Sales and Pre-Sales": 3,
+          "Service Outages and Maintenance": 0,
+          "Technical Support": 2
+        },
+        "General Inquiry": {
+          "Billing and Payments": 0,
+          "Customer Service": 0,
+          "General Inquiry": 0,
+          "Human Resources": 0,
+          "IT Support": 0,
+          "Product Support": 1,
+          "Returns and Exchanges": 0,
+          "Sales and Pre-Sales": 0,
+          "Service Outages and Maintenance": 0,
+          "Technical Support": 0
+        },
+        "Human Resources": {
+          "Billing and Payments": 0,
+          "Customer Service": 0,
+          "General Inquiry": 0,
+          "Human Resources": 2,
+          "IT Support": 0,
+          "Product Support": 0,
+          "Returns and Exchanges": 0,
+          "Sales and Pre-Sales": 0,
+          "Service Outages and Maintenance": 0,
+          "Technical Support": 1
+        },
+        "IT Support": {
+          "Billing and Payments": 0,
+          "Customer Service": 0,
+          "General Inquiry": 0,
+          "Human Resources": 0,
+          "IT Support": 1,
+          "Product Support": 1,
+          "Returns and Exchanges": 0,
+          "Sales and Pre-Sales": 0,
+          "Service Outages and Maintenance": 0,
+          "Technical Support": 4
+        },
+        "Product Support": {
+          "Billing and Payments": 0,
+          "Customer Service": 0,
+          "General Inquiry": 0,
+          "Human Resources": 0,
+          "IT Support": 0,
+          "Product Support": 4,
+          "Returns and Exchanges": 0,
+          "Sales and Pre-Sales": 4,
+          "Service Outages and Maintenance": 0,
+          "Technical Support": 1
+        },
+        "Returns and Exchanges": {
+          "Billing and Payments": 0,
+          "Customer Service": 0,
+          "General Inquiry": 0,
+          "Human Resources": 0,
+          "IT Support": 0,
+          "Product Support": 2,
+          "Returns and Exchanges": 0,
+          "Sales and Pre-Sales": 1,
+          "Service Outages and Maintenance": 0,
+          "Technical Support": 2
+        },
+        "Sales and Pre-Sales": {
+          "Billing and Payments": 0,
+          "Customer Service": 0,
+          "General Inquiry": 0,
+          "Human Resources": 0,
+          "IT Support": 0,
+          "Product Support": 0,
+          "Returns and Exchanges": 0,
+          "Sales and Pre-Sales": 1,
+          "Service Outages and Maintenance": 0,
+          "Technical Support": 0
+        },
+        "Service Outages and Maintenance": {
+          "Billing and Payments": 0,
+          "Customer Service": 0,
+          "General Inquiry": 0,
+          "Human Resources": 0,
+          "IT Support": 0,
+          "Product Support": 0,
+          "Returns and Exchanges": 0,
+          "Sales and Pre-Sales": 0,
+          "Service Outages and Maintenance": 0,
+          "Technical Support": 2
+        },
+        "Technical Support": {
+          "Billing and Payments": 0,
+          "Customer Service": 0,
+          "General Inquiry": 0,
+          "Human Resources": 0,
+          "IT Support": 1,
+          "Product Support": 3,
+          "Returns and Exchanges": 0,
+          "Sales and Pre-Sales": 0,
+          "Service Outages and Maintenance": 0,
+          "Technical Support": 13
+        }
+      },
+      "majority_class": 0.2833,
+      "accuracy_ci95": [
+        0.276,
+        0.524
+      ]
+    },
+    "priority": {
+      "target": "priority",
+      "n": 60,
+      "accuracy": 0.3833,
+      "macro_f1": 0.3842,
+      "per_class": [
+        {
+          "label": "high",
+          "support": 19,
+          "precision": 0.5263,
+          "recall": 0.5263,
+          "f1": 0.5263
+        },
+        {
+          "label": "low",
+          "support": 16,
+          "precision": 0.2632,
+          "recall": 0.3125,
+          "f1": 0.2857
+        },
+        {
+          "label": "medium",
+          "support": 25,
+          "precision": 0.3636,
+          "recall": 0.32,
+          "f1": 0.3404
+        }
+      ],
+      "confusion": {
+        "high": {
+          "high": 10,
+          "low": 4,
+          "medium": 5
+        },
+        "low": {
+          "high": 2,
+          "low": 5,
+          "medium": 9
+        },
+        "medium": {
+          "high": 7,
+          "low": 10,
+          "medium": 8
+        }
+      },
+      "majority_class": 0.4167,
+      "accuracy_ci95": [
+        0.2603,
+        0.5063
+      ]
+    }
+  },
+  "calibration": [
+    {
+      "range": "0.4-0.6",
+      "n": 1,
+      "accuracy": 0.0,
+      "mean_confidence": 0.5
+    },
+    {
+      "range": "0.6-0.8",
+      "n": 3,
+      "accuracy": 0.3333,
+      "mean_confidence": 0.6
+    },
+    {
+      "range": "0.8-1.0",
+      "n": 56,
+      "accuracy": 0.3929,
+      "mean_confidence": 0.875
+    }
+  ],
+  "latency_ms": {
+    "mean": 1361.2,
+    "p50": 1322,
+    "p95": 1687
+  },
+  "tokens": {
+    "input": 25866,
+    "output": 12866
+  },
+  "estimated_cost_usd": 0.0,
+  "wall_seconds": 321.8,
+  "baseline": {
+    "type": {
+      "accuracy": 0.9,
+      "macro_f1": 0.918297299762817,
+      "majority_class": 0.48333333333333334,
+      "n": 60,
+      "ci95": [
+        0.8241,
+        0.9759
+      ]
+    },
+    "queue": {
+      "accuracy": 0.48333333333333334,
+      "macro_f1": 0.5041713184476342,
+      "majority_class": 0.2833333333333333,
+      "n": 60,
+      "ci95": [
+        0.3569,
+        0.6098
+      ]
+    },
+    "priority": {
+      "accuracy": 0.5166666666666667,
+      "macro_f1": 0.5160405688707576,
+      "majority_class": 0.4166666666666667,
+      "n": 60,
+      "ci95": [
+        0.3902,
+        0.6431
+      ]
+    }
+  },
+  "comparison_warnings": []
+}
