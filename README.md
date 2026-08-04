@@ -71,6 +71,10 @@ evidence with citations, handling a category with no training examples yet.
 Triage classification is not that, and shipping it as though it were would
 have meant shipping a feature that is worse than a constant.
 
+**Limitations.** n=60 and zero-shot only, so intervals are ±12 points.
+Few-shot is implemented in the harness but unrun — Gemini's free-tier daily
+allowance did not stretch to a second variant.
+
 Method: [`notebooks/02-triage-baseline.ipynb`](notebooks/02-triage-baseline.ipynb)
 · harness: [`apps/ai-service/app/eval/`](apps/ai-service/app/eval)
 
