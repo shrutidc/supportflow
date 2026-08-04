@@ -4,12 +4,22 @@
 escalation for a B2B SaaS support team, built as a production-shaped
 application rather than a CRUD demo.
 
-> **Live demo:** <https://supportflow-lake.vercel.app>
->
-> **Sign in with** `demo+clerk_test@example.com` / `SupportFlowDemo2026!`
-> — a throwaway account on a seeded workspace of 400 tickets. Clerk's sign-in
-> card shows a "Development mode" badge; the instance is intentionally a
-> development one, since a production instance requires a custom domain.
+### ▶ [Try the live demo](https://supportflow-lake.vercel.app)
+
+Sign in with **`demo+clerk_test@example.com`** / **`SupportFlowDemo2026!`** —
+a throwaway account on a seeded workspace of 400 tickets.
+
+**Worth a look, in order:**
+
+1. **[Inbox](https://supportflow-lake.vercel.app/inbox)** — filter by status,
+   claim an unassigned ticket
+2. **Open any ticket** — the right panel carries the AI triage and summary,
+   with the quotes behind each suggestion. Nothing is applied until you click.
+3. **[Dashboard](https://supportflow-lake.vercel.app/dashboard)** — SLA
+   compliance, resolution percentiles, backlog age
+
+Clerk's card shows a "Development mode" badge: the instance is deliberately a
+development one, since a production instance needs a custom domain.
 
 ---
 
