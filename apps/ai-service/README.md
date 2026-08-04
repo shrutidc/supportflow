@@ -64,7 +64,7 @@ customer's own email is often the context that makes a ticket answerable.
 
 ```bash
 python3 -m venv .venv && ./.venv/bin/pip install -r requirements.txt
-./.venv/bin/python -m pytest tests/ -q          # 48 tests, no key needed
+./.venv/bin/python -m pytest tests/ -q          # 71 tests, no key needed
 ./.venv/bin/uvicorn app.main:app --port 8000
 ```
 
